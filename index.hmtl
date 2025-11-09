@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เครื่องคำนวณภาษีปี 2567 (Premium)</title>
+    <!-- โหลด Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- โหลดฟอนต์ Sarabun และ Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- สไตล์ Custom สำหรับ Premium Glassmorphism -->
+    <style>
+        /* ตั้งค่าฟอนต์หลัก */
+        body {
+            font-family: 'Sarabun', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: #e2e8f0;
+        }
+
+        /* สไตล์ "Glassmorphism" สำหรับ Section ต่างๆ - Enhanced */
+        .glass-section {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .glass-section:hover {
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* สไตล์สำหรับปุ่มกดแบบนูน (Push Button) */
+        .push-button {
+            border-radius: 1rem;
+            font-weight: 700;
+            padding: 0.8rem 1.5rem;
+            color: white;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: 0 6px 15px -3px rgba(0, 0, 0, 0.4);
+            transform: translateY(0);
+            width: 100%;
+        }
+        
+        .push-button-primary {
+            background: linear-gradient(145deg, #6366f1, #4f46e5);
+            border-bottom: 4px solid #3730a3;
+        }
+
+        .push-button-primary:active {
+            transform: translateY(3px);
+            border-bottom-width: 1px;
+            filter: brightness(1.1);
+        }
+        
+        .push-button-secondary {
+            background: linear-gradient(145deg, #3b82f6, #2563eb);
+            border-bottom: 4px solid #1e40af;
+        }
+        
+        .push-button-secondary:active {
+            transform: translateY(3px);
+            border-bottom-width: 1px;
+            filter: brightness(1.1);
+        }
+
+        /* สไตล์ Input field ให้เข้าธีม */
+        .form-input, .form-select {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0.75rem;
+            color: white;
+            padding: 0.75rem;
+            width: 100%;
+            transition: all 0.3s ease;
+            font-size: 16px; /* ป้องกัน zoom บน iOS */
+        }
+        
+        .form-input:focus, .form-select:focus {
+            background: rgba(0, 0, 0, 0.5);
+            border-color: #6366f1;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.7);
+        }
+        
+        /* สไตล์ Select (Dropdown) */
+        .form-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+            background-position: right 0.75rem center;
+            background-repeat: no-repeat;
+            background-size: 1.25em;
+        }
+        
+        /* สไตล์ <details> (Accordion) */
+        details > summary {
+            cursor: pointer;
+            list-style: none;
+            padding: 0.5rem 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        details > summary::-webkit-details-marker { display: none; }
+        
+        /* ไอคอน + / − */
+        details > summary::after {
+            content: '+';
+            font-size: 1.5rem;
+            font-weight: 300;
+            color: #93c5fd;
+            transition: transform 0.2s ease;
+            line-height: 1;
+        }
+        
+        details[open] > summary::after {
+            content: '−';
+            transform: rotate(0deg);
+        }
+        
+        /* สรุปผลลัพธ์ใน Accordion */
+        .summary-total {
+            background-color: #16a34a;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            opacity: 0.9;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-left-color: #6366f1;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ปรับปรุงสำหรับมือถือ */
+        @media (max-width: 768px) {
+            .glass-section {
+                padding: 1rem;
+                border-radius: 1rem;
+                margin-bottom: 1rem;
+            }
+            
+            details > summary {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+            
+            .summary-total {
+                align-self: flex-start;
+            }
+            
+            .push-button {
+                padding: 0.75rem 1rem;
+                font-size: 0.9rem;
+            }
+            
+            /* ปรับขนาดฟอนต์หัวข้อสำหรับมือถือ */
+            h1 {
+                font-size: 1.75rem !important;
+            }
+            
+            h2 {
+                font-size: 1.25rem !important;
+            }
+            
+            h3 {
+                font-size: 1.125rem !important;
+            }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10 min-h-screen">
+
+    <div class="max-w-4xl mx-auto">
+        
+        <header class="text-center mb-6 md:mb-10">
+            <h1 class="text-2xl md:text-4xl lg:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-indigo-400 drop-shadow-lg">
+                Smart Tax Planner
+            </h1>
+            <p class="text-base md:text-lg text-blue-200 mt-3">เครื่องมือวางแผนภาษีเงินได้บุคคลธรรมดา ปี 2567</p>
+        </header>
+
+        <!-- ฟอร์มสำหรับกรอกข้อมูล -->
+        <form id="tax-form">
+            <div id="section-container">
+                
+                <!-- 1. เงินได้พึงประเมิน -->
+                <details id="income-details-accordion" class="glass-section" open data-section-id="income">
+                    <summary>
+                        <h2 class="text-xl md:text-2xl font-semibold text-blue-300">1. เงินได้พึงประเมิน (40(1) - 40(8))</h2>
+                        <span id="income-summary-total" class="summary-total hidden"></span>
+                    </summary>
+                    
+                    <div class="border-t border-blue-800/50 pt-4 md:pt-6 mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-x-6 md:gap-y-4">
+                        
+                        <!-- 40(1) เงินเดือน -->
+                        <div class="md:col-span-2">
+                            <label for="income1" class="block text-sm font-medium mb-1">เงินเดือน, ค่าจ้าง (40(1))</label>
+                            <input type="number" id="income1" class="form-input" placeholder="0" value="0">
+                        </div>
+                        
+                        <!-- 40(2) ค่าธรรมเนียม -->
+                        <div>
+                            <label for="income2" class="block text-sm font-medium mb-1">ค่าธรรมเนียม, ค่านายหน้า (40(2))</label>
+                            <input type="number" id="income2" class="form-input" placeholder="0" value="0">
+                        </div>
+                        
+                        <!-- 40(3) ค่าลิขสิทธิ์ -->
+                        <div>
+                            <label for="income3" class="block text-sm font-medium mb-1">ค่าลิขสิทธิ์ (40(3))</label>
+                            <input type="number" id="income3" class="form-input" placeholder="0" value="0">
+                        </div>
+                        
+                        <!-- 40(4) ดอกเบี้ย/ปันผล -->
+                        <div>
+                            <label for="income4" class="block text-sm font-medium mb-1">ดอกเบี้ย, เงินปันผล (40(4))</label>
+                            <input type="number" id="income4" class="form-input" placeholder="0" value="0">
+                            <label class="text-xs text-gray-400 mt-1 flex items-center">
+                                <input type="checkbox" id="income4_taxed" class="mr-1"> 
+                                ถูกหัก ณ ที่จ่าย และไม่นำมารวมคำนวณ
+                            </label>
+                        </div>
+
+                        <!-- 40(5) ค่าเช่า -->
+                        <div>
+                            <label for="income5" class="block text-sm font-medium mb-1">ค่าเช่า (40(5))</label>
+                            <input type="number" id="income5" class="form-input" placeholder="0" value="0">
+                        </div>
+
+                        <!-- 40(6) วิชาชีพอิสระ -->
+                        <div>
+                            <label for="income6" class="block text-sm font-medium mb-1">วิชาชีพอิสระ (40(6))</label>
+                            <input type="number" id="income6" class="form-input" placeholder="0" value="0">
+                        </div>
+
+                        <!-- 40(7) รับเหมา -->
+                        <div>
+                            <label for="income7" class="block text-sm font-medium mb-1">รับเหมา (40(7))</label>
+                            <input type="number" id="income7" class="form-input" placeholder="0" value="0">
+                        </div>
+                        
+                        <!-- 40(8) อื่นๆ -->
+                        <div>
+                            <label for="income8" class="block text-sm font-medium mb-1">เงินได้อื่นๆ (40(8))</label>
+                            <input type="number" id="income8" class="form-input" placeholder="0" value="0">
+                        </div>
+                        
+                        <!-- ปุ่มยืนยัน -->
+                        <div class="md:col-span-2 text-right mt-4 md:mt-6">
+                            <button type="button" class="confirm-btn push-button push-button-secondary" data-section-id="income">
+                                ยืนยันข้อมูลเงินได้
+                            </button>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- 2. ค่าลดหย่อนส่วนตัวและครอบครัว -->
+                <details id="family-details-accordion" class="glass-section" data-section-id="family">
+                    <summary>
+                        <h2 class="text-xl md:text-2xl font-semibold text-blue-300">2. ค่าลดหย่อนส่วนตัวและครอบครัว</h2>
+                        <span id="family-summary-total" class="summary-total hidden"></span>
+                    </summary>
+                    
+                    <div class="border-t border-blue-800/50 pt-4 md:pt-6 mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-x-6 md:gap-y-4">
+                        <!-- สถานะสมรส -->
+                        <div class="md:col-span-2">
+                            <label for="spouse_status" class="block text-sm font-medium mb-1">สถานะสมรส</label>
+                            <select id="spouse_status" class="form-select">
+                                <option value="none">โสด / คู่สมรสมีเงินได้ (ลดหย่อนส่วนตัว 60,000)</option>
+                                <option value="no_income">มีคู่สมรส (ไม่มีเงินได้) (ลดหย่อนเพิ่ม 60,000)</option>
+                            </select>
+                        </div>
+                        
+                        <!-- บุตร -->
+                        <div>
+                            <label for="children_pre_2561" class="block text-sm font-medium mb-1">บุตร (เกิดก่อน 2561) คนละ 30,000</label>
+                            <input type="number" id="children_pre_2561" class="form-input" placeholder="0" value="0">
+                        </div>
+                        
+                        <div>
+                            <label for="children_post_2561" class="block text-sm font-medium mb-1">บุตร (คนที่ 2 ขึ้นไป, เกิด 2561+) คนละ 60,000</label>
+                            <input type="number" id="children_post_2561" class="form-input" placeholder="0" value="0">
+                        </div>
+
+                        <!-- ค่าอุปการะ -->
+                        <div>
+                            <label for="parents" class="block text-sm font-medium mb-1">อุปการะบิดามารดา (คนละ 30,000)</label>
+                            <input type="number" id="parents" class="form-input" placeholder="0" value="0">
+                        </div>
+                        
+                        <div>
+                            <label for="parents_spouse" class="block text-sm font-medium mb-1">บิดามารดาคู่สมรส (คนละ 30,000)</label>
+                            <input type="number" id="parents_spouse" class="form-input" placeholder="0" value="0">
+                        </div>
+
+                        <div>
+                            <label for="disabled_support" class="block text-sm font-medium mb-1">อุปการะผู้พิการ (คนละ 60,000)</label>
+                            <input type="number" id="disabled_support" class="form-input" placeholder="0" value="0">
+                        </div>
+                        
+                         <!-- ปุ่มยืนยัน -->
+                        <div class="md:col-span-2 text-right mt-4 md:mt-6">
+                            <button type="button" class="confirm-btn push-button push-button-secondary" data-section-id="family">
+                                ยืนยันข้อมูลครอบครัว
+                            </button>
+                        </div>
+                    </div>
+                </details>
+                
+                <!-- 3. ค่าลดหย่อนประกันและการลงทุน (กลุ่มบำนาญ) -->
+                <details id="investment-details-accordion" class="glass-section" data-section-id="investment">
+                    <summary>
+                        <h2 class="text-xl md:text-2xl font-semibold text-blue-300">3. กลุ่มประกัน & กองทุนลดหย่อน</h2>
+                        <span id="investment-summary-total" class="summary-total hidden"></span>
+                    </summary>
+                    
+                    <div class="border-t border-blue-800/50 pt-4 md:pt-6 mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-x-6 md:gap-y-4">
+                        
+                        <!-- ประกัน -->
+                        <div class="md:col-span-2 text-base font-semibold text-blue-200 pt-2 border-b border-blue-800/30 pb-2">กลุ่มประกัน</div>
+
+                        <div>
+                            <label for="social_security" class="block text-sm font-medium mb-1">ประกันสังคม (สูงสุด 9,000)</label>
+                            <input type="number" id="social_security" class="form-input" placeholder="0" max="9000" value="0">
+                        </div>
+                        <div>
+                            <label for="life_insurance" class="block text-sm font-medium mb-1">เบี้ยประกันชีวิตและสะสมทรัพย์</label>
+                            <input type="number" id="life_insurance" class="form-input" placeholder="0" value="0">
+                        </div>
+                        <div>
+                            <label for="health_insurance" class="block text-sm font-medium mb-1">เบี้ยประกันสุขภาพ (สูงสุด 25,000)</label>
+                            <input type="number" id="health_insurance" class="form-input" placeholder="0" value="0">
+                        </div>
+                        <div>
+                            <label for="life_insurance_spouse" class="block text-sm font-medium mb-1">เบี้ยประกันชีวิตคู่สมรส (ไม่มีเงินได้, สูงสุด 10,000)</label>
+                            <input type="number" id="life_insurance_spouse" class="form-input" placeholder="0" value="0">
+                        </div>
+                        <div>
+                            <label for="parent_health_insurance" class="block text-sm font-medium mb-1">ประกันสุขภาพบิดามารดา (สูงสุด 15,000)</label>
+                            <input type="number" id="parent_health_insurance" class="form-input" placeholder="0" value="0">
+                        </div>
+
+                        <!-- การลงทุนเพื่อเกษียณ -->
+                        <div class="md:col-span-2 text-base font-semibold text-blue-200 pt-4 border-b border-blue-800/30 pb-2">กลุ่มกองทุนและบำนาญ (รวมกันไม่เกิน 500,000)</div>
+                        
+                        <div>
+                            <label for="annuity_insurance" class="block text-sm font-medium mb-1">เบี้ยประกันบำนาญ (สูงสุด 200,000)</label>
+                            <input type="number" id="annuity_insurance" class="form-input" placeholder="0" value="0">
+                        </div>
+                        <div>
+                            <label for="rmf" class="block text-sm font-medium mb-1">RMF (กองทุนรวมเพื่อการเลี้ยงชีพ)</label>
+                            <input type="number" id="rmf" class="form-input" placeholder="0" value="0">
+                        </div>
+                        <div>
+                            <label for="ssf" class="block text-sm font-medium mb-1">SSF (กองทุนรวมเพื่อการออม, สูงสุด 200,000)</label>
+                            <input type="number" id="ssf" class="form-input" placeholder="0" value="0">
+                        </div>
+                        <div>
+                            <label for="provident_fund" class="block text-sm font-medium mb-1">กองทุนสำรองเลี้ยงชีพ/กบข.</label>
+                            <input type="number" id="provident_fund" class="form-input" placeholder="0" value="0">
+                        </div>
+                        <div>
+                            <label for="nsf" class="block text-sm font-medium mb-1">กองทุนการออมแห่งชาติ (กอช.) (สูงสุด 30,000)</label>
+                            <input type="number" id="nsf" class="form-input" placeholder="0" value="0">
+                        </div>
+
+                        <!-- TESG + Social Enterprise -->
+                        <div class="md:col-span-2 text-base font-semibold text-blue-200 pt-4 border-b border-blue-800/30 pb-2">กลุ่มกองทุนพิเศษ</div>
+                         <div>
+                            <label for="tesg" class="block text-sm font-medium mb-1">TESG (กองทุนรวมไทยเพื่อความยั่งยืน, สูงสุด 100,000)</label>
+                            <input type="number" id="tesg" class="form-input" placeholder="0" value="0">
+                        </div>
+                         <div>
+                            <label for="social_enterprise" class="block text-sm font-medium mb-1">เงินลงทุนธุรกิจ Social Enterprise (สูงสุด 100,000)</label>
+                            <input type="number" id="social_enterprise" class="form-input" placeholder="0" value="0">
+                        </div>
+                        
+                        <!-- ปุ่มยืนยัน -->
+                        <div class="md:col-span-2 text-right mt-4 md:mt-6">
+                            <button type="button" class="confirm-btn push-button push-button-secondary" data-section-id="investment">
+                                ยืนยันข้อมูลประกัน/ลงทุน
+                            </button>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- 4. ค่าลดหย่อนอื่นๆ และบริจาค -->
+                <details id="other-donation-details-accordion" class="glass-section" data-section-id="other-donation">
+                    <summary>
+                        <h2 class="text-xl md:text-2xl font-semibold text-blue-300">4. ค่าลดหย่อนอื่นๆ และบริจาค</h2>
+                        <span id="other-donation-summary-total" class="summary-total hidden"></span>
+                    </summary>
+                    
+                    <div class="border-t border-blue-800/50 pt-4 md:pt-6 mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-x-6 md:gap-y-4">
+                        <div class="md:col-span-2 text-base font-semibold text-blue-200 pt-2 border-b border-blue-800/30 pb-2">กลุ่มอื่นๆ</div>
+                        <div>
+                            <label for="housing_interest" class="block text-sm font-medium mb-1">ดอกเบี้ยบ้าน (สูงสุด 100,000)</label>
+                            <input type="number" id="housing_interest" class="form-input" placeholder="0" max="100000" value="0">
+                        </div>
+                        <div>
+                            <label for="political_donation" class="block text-sm font-medium mb-1">เงินบริจาคพรรคการเมือง (สูงสุด 10,000)</label>
+                            <input type="number" id="political_donation" class="form-input" placeholder="0" max="10000" value="0">
+                        </div>
+                        
+                        <!-- บริจาค -->
+                        <div class="md:col-span-2 text-base font-semibold text-blue-200 pt-4 border-b border-blue-800/30 pb-2">กลุ่มเงินบริจาค (10% ของเงินได้หลังหักลดหย่อน)</div>
+                        
+                        <div>
+                            <label for="donation_general" class="block text-sm font-medium mb-1">บริจาคทั่วไป (1x)</label>
+                            <input type="number" id="donation_general" class="form-input" placeholder="0" value="0">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="donation_education" class="block text-sm font-medium mb-1">บริจาคการศึกษา/กีฬา/โรงพยาบาล (2x)</label>
+                            <input type="number" id="donation_education" class="form-input" placeholder="0" value="0">
+                        </div>
+
+                         <!-- ปุ่มยืนยัน -->
+                        <div class="md:col-span-2 text-right mt-4 md:mt-6">
+                            <button type="button" class="confirm-btn push-button push-button-secondary" data-section-id="other-donation">
+                                ยืนยันข้อมูลลดหย่อนอื่นๆ
+                            </button>
+                        </div>
+                    </div>
+                </details>
+                
+                 <!-- 5. มาตรการส่งเสริมเศรษฐกิจ (กลุ่มช้อปดีมีคืน/e-Receipt) -->
+                <details id="government-incentive-details-accordion" class="glass-section" data-section-id="govt-incentive">
+                    <summary>
+                        <h2 class="text-xl md:text-2xl font-semibold text-blue-300">5. กลุ่มมาตรการส่งเสริมเศรษฐกิจ</h2>
+                        <span id="govt-incentive-summary-total" class="summary-total hidden"></span>
+                    </summary>
+                    
+                    <div class="border-t border-blue-800/50 pt-4 md:pt-6 mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-x-6 md:gap-y-4">
+                        <div class="md:col-span-2 text-base font-semibold text-blue-200 pt-2 border-b border-blue-800/30 pb-2">มาตรการตามนโยบายรัฐ</div>
+                        <div>
+                            <label for="e_receipt" class="block text-sm font-medium mb-1">Easy E-Receipt (สูงสุด 50,000)</label>
+                            <input type="number" id="e_receipt" class="form-input" placeholder="0" max="50000" value="0">
+                        </div>
+                        <div>
+                            <label for="otop" class="block text-sm font-medium mb-1">OTOP (สูงสุด 20,000)</label>
+                            <input type="number" id="otop" class="form-input" placeholder="0" max="20000" value="0">
+                        </div>
+                        <div>
+                            <label for="travel" class="block text-sm font-medium mb-1">ค่าแพ็กเกจท่องเที่ยวในประเทศ (สูงสุด 30,000)</label>
+                            <input type="number" id="travel" class="form-input" placeholder="0" max="30000" value="0">
+                        </div>
+                        <div>
+                            <label for="new_home_interest" class="block text-sm font-medium mb-1">สร้าง/ซื้อบ้านใหม่ (ปีแรก, สูงสุด 10,000)</label>
+                            <input type="number" id="new_home_interest" class="form-input" placeholder="0" max="10000" value="0">
+                        </div>
+
+                         <!-- ปุ่มยืนยัน -->
+                        <div class="md:col-span-2 text-right mt-4 md:mt-6">
+                            <button type="button" class="confirm-btn push-button push-button-secondary" data-section-id="govt-incentive">
+                                ยืนยันข้อมูลมาตรการรัฐ
+                            </button>
+                        </div>
+                    </div>
+                </details>
+            </div>
+            
+            <!-- ปุ่มคำนวณรวม -->
+            <div class="mt-8 md:mt-12 text-center">
+                <button type="submit" id="calculate-btn" class="push-button push-button-primary text-lg md:text-2xl">
+                    <span id="btn-text">คำนวณภาษีรวมทั้งหมด</span>
+                    <div id="btn-loader" class="spinner hidden mx-auto"></div>
+                </button>
+            </div>
+
+        </form>
+        
+        <!-- ส่วนแสดงผลลัพธ์ (ซ่อนไว้เริ่มต้น) -->
+        <div id="results" class="hidden mt-8 md:mt-16">
+            <div id="results-card" class="bg-blue-900/40 border border-indigo-500/50 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl backdrop-blur-lg">
+                <h2 class="text-xl md:text-3xl lg:text-4xl font-bold text-center text-green-300 mb-4 md:mb-8">สรุปผลการวางแผนภาษี</h2>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 text-center mb-6 md:mb-10">
+                    <!-- สรุปตัวเลขหลัก -->
+                    <div class="bg-gray-800/70 p-2 md:p-4 rounded-lg md:rounded-xl shadow-lg">
+                        <div class="text-blue-300 text-xs md:text-sm">เงินได้หลังหักค่าใช้จ่าย</div>
+                        <div id="res-total-income-after-expense" class="text-base md:text-xl font-extrabold text-white">0</div>
+                    </div>
+                    <div class="bg-gray-800/70 p-2 md:p-4 rounded-lg md:rounded-xl shadow-lg">
+                        <div class="text-blue-300 text-xs md:text-sm">ค่าลดหย่อนทั้งหมด</div>
+                        <div id="res-total-deduction" class="text-base md:text-xl font-extrabold text-white">0</div>
+                    </div>
+                    <div class="bg-gray-800/70 p-2 md:p-4 rounded-lg md:rounded-xl shadow-lg">
+                        <div class="text-blue-300 text-xs md:text-sm">เงินได้สุทธิ</div>
+                        <div id="res-net-taxable-income" class="text-base md:text-xl font-extrabold text-yellow-300">0</div>
+                    </div>
+                    <div class="bg-gray-800/70 p-2 md:p-4 rounded-lg md:rounded-xl shadow-lg">
+                        <div class="text-blue-300 text-xs md:text-sm">ฐานภาษีสูงสุด</div>
+                        <div id="res-marginal-rate" class="text-base md:text-xl font-extrabold text-red-400">0%</div>
+                    </div>
+                </div>
+                
+                <!-- ผลลัพธ์ภาษีสุดท้าย -->
+                <div class="text-center bg-gray-900/50 p-4 md:p-6 lg:p-10 rounded-2xl md:rounded-3xl mb-6 md:mb-10 border border-green-500/50">
+                    <div class="text-lg md:text-2xl font-medium text-green-300">ภาษีที่ต้องชำระ (Estimated Tax)</div>
+                    <div id="res-total-tax" class="text-3xl md:text-5xl lg:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-green-400 py-2">
+                        0
+                    </div>
+                    <div id="res-net-income-warning" class="text-xs md:text-sm text-yellow-400 mt-2 hidden">
+                        *เงินได้สุทธิไม่ถึง 150,000 บาท ได้รับการยกเว้นภาษี
+                    </div>
+                </div>
+
+                <!-- โอกาสประหยัดภาษี -->
+                <h3 class="text-lg md:text-2xl font-semibold text-center text-blue-200 mb-4 md:mb-6">โอกาสในการลดหย่อนภาษีเพิ่มเติม</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                    
+                    <!-- ประกันชีวิต + สุขภาพ -->
+                    <div class="glass-section p-4 md:p-6 border-green-500/50">
+                        <div class="text-lg md:text-xl font-semibold text-green-300">กลุ่มประกันชีวิต/สุขภาพ</div>
+                        <p class="text-xs md:text-sm text-gray-400 mb-3 md:mb-4">(สูงสุด 100,000 บาท)</p>
+                        
+                        <div class="text-gray-300 text-sm">ใช้สิทธิ์ไปแล้ว</div>
+                        <div id="opp-life-current" class="text-base md:text-lg font-bold text-white mb-1 md:mb-2">0</div>
+                        
+                        <div class="text-blue-200 text-sm">ซื้อเพิ่มได้อีก</div>
+                        <div id="opp-life-remaining" class="text-lg md:text-xl font-bold text-blue-300 mb-1 md:mb-2">0</div>
+                        
+                        <div class="text-green-400 text-sm">ประหยัดภาษีได้ประมาณ</div>
+                        <div id="opp-life-saving" class="text-lg md:text-2xl font-extrabold text-green-400">0</div>
+                    </div>
+                    
+                    <!-- กองทุนเกษียณ (RMF/SSF/บำนาญ) -->
+                    <div class="glass-section p-4 md:p-6 border-green-500/50">
+                        <div class="text-lg md:text-xl font-semibold text-green-300">กลุ่มบำนาญและกองทุนเกษียณ</div>
+                        <p class="text-xs md:text-sm text-gray-400 mb-3 md:mb-4">(สูงสุด 500,000 บาท)</p>
+                        
+                        <div class="text-gray-300 text-sm">ใช้สิทธิ์ไปแล้ว</div>
+                        <div id="opp-annuity-current" class="text-base md:text-lg font-bold text-white mb-1 md:mb-2">0</div>
+                        
+                        <div class="text-blue-200 text-sm">ซื้อเพิ่มได้อีก (สูงสุด)</div>
+                        <div id="opp-annuity-remaining" class="text-lg md:text-xl font-bold text-blue-300 mb-1 md:mb-2">0</div>
+                        
+                        <div class="text-green-400 text-sm">ประหยัดภาษีได้ประมาณ</div>
+                        <div id="opp-annuity-saving" class="text-lg md:text-2xl font-extrabold text-green-400">0</div>
+                    </div>
+                    
+                    <!-- TESG (กองทุนไทยยั่งยืน) -->
+                    <div class="glass-section p-4 md:p-6 border-green-500/50">
+                        <div class="text-lg md:text-xl font-semibold text-green-300">กองทุน TESG</div>
+                        <p class="text-xs md:text-sm text-gray-400 mb-3 md:mb-4">(สูงสุด 100,000 บาท)</p>
+                        
+                        <div class="text-gray-300 text-sm">ใช้สิทธิ์ไปแล้ว</div>
+                        <div id="opp-tesg-current" class="text-base md:text-lg font-bold text-white mb-1 md:mb-2">0</div>
+                        
+                        <div class="text-blue-200 text-sm">ซื้อเพิ่มได้อีก</div>
+                        <div id="opp-tesg-remaining" class="text-lg md:text-xl font-bold text-blue-300 mb-1 md:mb-2">0</div>
+                        
+                        <div class="text-green-400 text-sm">ประหยัดภาษีได้ประมาณ</div>
+                        <div id="opp-tesg-saving" class="text-lg md:text-2xl font-extrabold text-green-400">0</div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-6 md:mt-10">
+                     <p class="text-base md:text-xl font-medium text-green-200">รวมประหยัดภาษีเพิ่มได้สูงสุด (รวมทั้ง 3 กลุ่ม)</p>
+                     <div id="opp-total-saving" class="text-2xl md:text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-lime-300 to-green-400">0</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('tax-form');
+            const calculateBtn = document.getElementById('calculate-btn');
+            const btnText = document.getElementById('btn-text');
+            const btnLoader = document.getElementById('btn-loader');
+            const resultsDiv = document.getElementById('results');
+            const confirmButtons = document.querySelectorAll('.confirm-btn');
+            
+            // ใช้เก็บค่าลดหย่อนที่คำนวณได้จริงในแต่ละหมวด
+            let calculatedDeductibles = {};
+            let incomeAfterExpense = 0; // เก็บผลลัพธ์ของเงินได้หลังหักค่าใช้จ่าย
+
+            // --- Utility Functions ---
+            
+            const getNum = (id) => parseFloat(document.getElementById(id).value || 0);
+            const formatNum = (num) => Math.round(num).toLocaleString('en-US', { maximumFractionDigits: 0 });
+            const formatNum2f = (num) => num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            
+            /**
+             * ฟังก์ชันหลักในการยืนยันข้อมูลแต่ละส่วน
+             */
+            function confirmSection(sectionId) {
+                const accordion = document.querySelector(`[data-section-id="${sectionId}"]`);
+                const summarySpan = document.getElementById(`${sectionId}-summary-total`);
+                const request = buildRequestJson();
+                
+                let result = 0;
+                let summaryText = "";
+                
+                // คำนวณตาม Section
+                if (sectionId === 'income') {
+                    const incomeResult = calculateIncome(request.income);
+                    incomeAfterExpense = incomeResult.totalIncomeAfterExpense;
+                    result = incomeAfterExpense;
+                    summaryText = `หลังหัก คชจ.: ${formatNum(result)} บ.`;
+                } else if (sectionId === 'family') {
+                    const deductions = calculateFamilyDeductions(request.deductions);
+                    calculatedDeductibles.family = deductions.deductible;
+                    result = deductions.totalFamilyDeductions;
+                    summaryText = `ลดหย่อน: ${formatNum(result)} บ.`;
+                } else if (sectionId === 'investment') {
+                    // ต้องใช้ incomeAfterExpense (จาก Section 1) ในการคำนวณเพดานรวม (500,000)
+                    const tempTotalDeduction = (calculatedDeductibles.family?.totalFamilyDeductions || 0) + (calculatedDeductibles.govtIncentive?.totalGovtIncentiveDeductions || 0);
+                    const deductions = calculateInvestmentDeductions(request.deductions, request.income, tempTotalDeduction);
+                    calculatedDeductibles.investment = deductions.deductible;
+                    result = deductions.totalInvestmentDeductions;
+                    summaryText = `ลดหย่อน: ${formatNum(result)} บ.`;
+                } else if (sectionId === 'other-donation') {
+                     // ต้องใช้ incomeAfterExpense และค่าลดหย่อนอื่น (จาก Section 2, 3, 5) สำหรับเพดานบริจาค (10%)
+                     const tempTotalDeduction = (calculatedDeductibles.family?.totalFamilyDeductions || 0) + 
+                                                (calculatedDeductibles.investment?.totalInvestmentDeductions || 0) + 
+                                                (calculatedDeductibles.govtIncentive?.totalGovtIncentiveDeductions || 0);
+                    const deductions = calculateOtherDonationDeductions(request.deductions, incomeAfterExpense, tempTotalDeduction);
+                    calculatedDeductibles.otherDonation = deductions.deductible;
+                    result = deductions.totalOtherDonationDeductions;
+                    summaryText = `ลดหย่อน: ${formatNum(result)} บ.`;
+                } else if (sectionId === 'govt-incentive') {
+                    const deductions = calculateGovtIncentiveDeductions(request.deductions);
+                    calculatedDeductibles.govtIncentive = deductions.deductible;
+                    result = deductions.totalGovtIncentiveDeductions;
+                    summaryText = `ลดหย่อน: ${formatNum(result)} บ.`;
+                }
+
+                // แสดงผลลัพธ์และพับ Accordion
+                summarySpan.textContent = summaryText;
+                summarySpan.classList.remove('hidden');
+                accordion.open = false;
+            }
+            
+            // --- Event Listeners สำหรับปุ่มยืนยันแต่ละ Section ---
+            confirmButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const sectionId = e.target.getAttribute('data-section-id');
+                    confirmSection(sectionId);
+                });
+            });
+
+
+            // --- Form Submit Logic ---
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                // 1. ตรวจสอบว่าได้มีการยืนยันข้อมูลทุกส่วนหรือไม่
+                const sections = ['income', 'family', 'investment', 'other-donation', 'govt-incentive'];
+                const allConfirmed = sections.every(s => document.getElementById(`${s}-summary-total`).classList.contains('summary-total') && !document.getElementById(`${s}-summary-total`).classList.contains('hidden'));
+
+                if (!allConfirmed) {
+                    alert('กรุณายืนยันข้อมูลในทุกหัวข้อหลัก (1-5) ก่อนการคำนวณรวม');
+                    return;
+                }
+                
+                // 2. เริ่ม Loading State
+                btnText.classList.add('hidden');
+                btnLoader.classList.remove('hidden');
+                calculateBtn.disabled = true;
+                resultsDiv.classList.add('hidden');
+                
+                setTimeout(() => {
+                    // 3. คำนวณภาษีรวม
+                    const requestJson = buildRequestJson();
+                    const responseJson = calculateTax(requestJson);
+                    
+                    // 4. แสดงผลลัพธ์
+                    displayResults(responseJson);
+
+                    // 5. สิ้นสุด Loading State
+                    btnText.classList.remove('hidden');
+                    btnLoader.classList.add('hidden');
+                    calculateBtn.disabled = false;
+                    resultsDiv.classList.remove('hidden');
+                    resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                }, 800); 
+            });
+            
+            /**
+             * 1. รวบรวมข้อมูลจากฟอร์มเป็น JSON (Request Object)
+             */
+            function buildRequestJson() {
+                const income4Taxed = document.getElementById('income4_taxed').checked;
+                
+                return {
+                    income: {
+                        i1: getNum('income1'), i2: getNum('income2'), i3: getNum('income3'), 
+                        i4: income4Taxed ? 0 : getNum('income4'), // ถูกหัก ณ ที่จ่าย และไม่นำมารวม ให้เป็น 0
+                        i5: getNum('income5'), i6: getNum('income6'), i7: getNum('income7'), i8: getNum('income8'),
+                    },
+                    deductions: {
+                        spouse_status: document.getElementById('spouse_status').value,
+                        children_pre_2561: getNum('children_pre_2561'), children_post_2561: getNum('children_post_2561'),
+                        parents: getNum('parents'), parents_spouse: getNum('parents_spouse'),
+                        disabled_support: getNum('disabled_support'),
+                        social_security: getNum('social_security'),
+                        life_insurance: getNum('life_insurance'), health_insurance: getNum('health_insurance'),
+                        annuity_insurance: getNum('annuity_insurance'), parent_health_insurance: getNum('parent_health_insurance'),
+                        life_insurance_spouse: getNum('life_insurance_spouse'), social_enterprise: getNum('social_enterprise'),
+                        rmf: getNum('rmf'), ssf: getNum('ssf'), tesg: getNum('tesg'), nsf: getNum('nsf'),
+                        provident_fund: getNum('provident_fund'),
+                        housing_interest: getNum('housing_interest'), political_donation: getNum('political_donation'),
+                        donation_general: getNum('donation_general'), donation_education: getNum('donation_education'),
+                        e_receipt: getNum('e_receipt'), otop: getNum('otop'), travel: getNum('travel'), new_home_interest: getNum('new_home_interest'),
+                    }
+                };
+            }
+            
+            /**
+             * 2. คำนวณภาษี (Calculation Engine)
+             */
+            function calculateTax(request) {
+                // --- Step 2.1: คำนวณเงินได้และหักค่าใช้จ่าย ---
+                const incomeResult = calculateIncome(request.income);
+                incomeAfterExpense = incomeResult.totalIncomeAfterExpense; // อัพเดทตัวแปร global
+                const totalIncome = incomeResult.totalIncome;
+
+                // --- Step 2.2: คำนวณค่าลดหย่อนแต่ละกลุ่ม
+                const familyResult = calculateFamilyDeductions(request.deductions);
+                const govtIncentiveResult = calculateGovtIncentiveDeductions(request.deductions); // ต้องคำนวณก่อน Donation
+                
+                // สำหรับกลุ่มลงทุน/ประกัน ต้องใช้ incomeAfterExpense
+                const invDeductionUsed = familyResult.totalFamilyDeductions + govtIncentiveResult.totalGovtIncentiveDeductions;
+                const investmentResult = calculateInvestmentDeductions(request.deductions, request.income, invDeductionUsed);
+                
+                // สำหรับกลุ่มบริจาค ต้องใช้ Net Income ก่อนบริจาค
+                const deductionBeforeDonation = familyResult.totalFamilyDeductions + 
+                                                govtIncentiveResult.totalGovtIncentiveDeductions + 
+                                                investmentResult.totalInvestmentDeductions;
+                
+                const otherDonationResult = calculateOtherDonationDeductions(request.deductions, incomeAfterExpense, deductionBeforeDonation);
+
+                // --- Step 2.3: รวมค่าลดหย่อนทั้งหมด ---
+                const totalDeductions = deductionBeforeDonation + otherDonationResult.totalOtherDonationDeductions;
+                
+                // --- Step 2.4: คำนวณเงินได้สุทธิ ---
+                let netTaxableIncome = incomeAfterExpense - totalDeductions;
+                netTaxableIncome = Math.max(0, netTaxableIncome); 
+                
+                // --- Step 2.5: คำนวณภาษี ---
+                const totalTax = calculateProgressiveTax(netTaxableIncome);
+                
+                // --- Step 2.6: คำนวณฐานภาษี ---
+                const marginalRate = getMarginalRate(netTaxableIncome);
+                
+                // --- Step 2.7: คำนวณโอกาสประหยัดภาษี ---
+                const opportunities = calculateOpportunities(investmentResult.deductible, marginalRate, netTaxableIncome);
+
+                // --- สร้าง Response JSON ---
+                return {
+                    summary: {
+                        totalIncome: totalIncome,
+                        totalIncomeAfterExpense: incomeAfterExpense,
+                        totalDeductions: totalDeductions,
+                        netTaxableIncome: netTaxableIncome,
+                        totalTax: totalTax,
+                        marginalRate: marginalRate
+                    },
+                    opportunities: opportunities,
+                };
+            }
+            
+            /**
+             * S1. คำนวณเงินได้ (Sub-function)
+             */
+            function calculateIncome(income) {
+                let totalIncome = 0;
+                let totalExpense = 0;
+                
+                // 40(1), 40(2)
+                const inc1_2 = income.i1 + income.i2;
+                totalIncome += inc1_2;
+                totalExpense += Math.min(inc1_2 * 0.5, 100000); 
+                
+                // 40(3)
+                totalIncome += income.i3;
+                totalExpense += Math.min(income.i3 * 0.5, 100000);
+                
+                // 40(4)
+                totalIncome += income.i4; 
+                
+                // 40(5)
+                totalIncome += income.i5;
+                totalExpense += Math.min(income.i5 * 0.3, income.i5); 
+                
+                // 40(6)
+                totalIncome += income.i6;
+                totalExpense += Math.min(income.i6 * 0.3, income.i6); 
+                
+                // 40(7)
+                totalIncome += income.i7;
+                totalExpense += Math.min(income.i7 * 0.6, income.i7); 
+                
+                // 40(8)
+                totalIncome += income.i8;
+                totalExpense += Math.min(income.i8 * 0.4, income.i8); 
+                
+                return {
+                    totalIncome: totalIncome,
+                    totalIncomeAfterExpense: totalIncome - totalExpense
+                };
+            }
+
+            /**
+             * S2. ค่าลดหย่อนส่วนตัวและครอบครัว (Family Deductions)
+             */
+            function calculateFamilyDeductions(d) {
+                let totalDeductions = 0;
+                let deductible = {};
+
+                deductible.personal = 60000;
+                totalDeductions += deductible.personal;
+
+                deductible.spouse = (d.spouse_status === 'no_income') ? 60000 : 0;
+                totalDeductions += deductible.spouse;
+
+                deductible.children = (d.children_pre_2561 * 30000) + (d.children_post_2561 * 60000);
+                totalDeductions += deductible.children;
+                
+                deductible.parents = Math.min(d.parents, 2) * 30000;
+                deductible.parents_spouse = (d.spouse_status === 'no_income' && deductible.spouse > 0) ? Math.min(d.parents_spouse, 2) * 30000 : 0;
+                totalDeductions += deductible.parents + deductible.parents_spouse;
+
+                deductible.disabled_support = d.disabled_support * 60000;
+                totalDeductions += deductible.disabled_support;
+                
+                deductible.parent_health_insurance = Math.min(d.parent_health_insurance, 15000);
+                totalDeductions += deductible.parent_health_insurance;
+                
+                deductible.social_security = Math.min(d.social_security, 9000);
+                totalDeductions += deductible.social_security;
+
+                return {
+                    totalFamilyDeductions: totalDeductions,
+                    deductible: deductible
+                };
+            }
+
+            /**
+             * S3. ค่าลดหย่อนประกันและการลงทุน (Investment Deductions)
+             */
+            function calculateInvestmentDeductions(d, income, deductionUsedBefore) {
+                let totalDeductions = 0;
+                let deductible = {};
+                
+                // ประกันชีวิตคู่สมรส (มีผลเมื่อคู่สมรสไม่มีเงินได้)
+                deductible.life_insurance_spouse = (d.spouse_status === 'no_income') ? Math.min(d.life_insurance_spouse, 10000) : 0;
+                totalDeductions += deductible.life_insurance_spouse;
+                
+                // เงินลงทุนธุรกิจ Social Enterprise
+                deductible.social_enterprise = Math.min(d.social_enterprise, 100000);
+                totalDeductions += deductible.social_enterprise;
+
+                // *** กลุ่มประกันชีวิต + สุขภาพ (รวมกันไม่เกิน 100k) ***
+                deductible.health_insurance = Math.min(d.health_insurance, 25000); // สุขภาพสูงสุด 25k
+                deductible.life_insurance = d.life_insurance;
+                deductible.life_health_combined = Math.min(deductible.life_insurance + deductible.health_insurance, 100000);
+                totalDeductions += deductible.life_health_combined;
+                
+                // *** กลุ่มเกษียณ (รวมกันไม่เกิน 500k) ***
+                const retirementCap = 500000;
+                let retirementUsed = 0;
+                
+                // 1. กองทุนสำรองเลี้ยงชีพ / กบข.
+                deductible.provident_fund = Math.min(d.provident_fund, retirementCap);
+                retirementUsed += deductible.provident_fund;
+                
+                // 2. กอช. (สูงสุด 30k)
+                deductible.nsf = Math.min(d.nsf, 30000, retirementCap - retirementUsed);
+                retirementUsed += deductible.nsf;
+                
+                // 3. RMF (ไม่เกิน 30% ของ inc, รวมแล้วไม่เกิน 500k)
+                const income30 = (income.i1 + income.i2 + income.i3 + income.i4 + income.i5 + income.i6 + income.i7 + income.i8) * 0.3;
+                deductible.rmf = Math.min(d.rmf, income30, retirementCap - retirementUsed);
+                retirementUsed += deductible.rmf;
+                
+                // 4. SSF (ไม่เกิน 30% ของ inc, ไม่เกิน 200k, รวมแล้วไม่เกิน 500k)
+                deductible.ssf = Math.min(d.ssf, income30, 200000, retirementCap - retirementUsed);
+                retirementUsed += deductible.ssf;
+                
+                // 5. ประกันบำนาญ (ไม่เกิน 15% ของ inc, ไม่เกิน 200k, รวมแล้วไม่เกิน 500k)
+                const income15 = (income.i1 + income.i2 + income.i3 + income.i4 + income.i5 + income.i6 + income.i7 + income.i8) * 0.15;
+                deductible.annuity_insurance = Math.min(d.annuity_insurance, income15, 200000, retirementCap - retirementUsed);
+                retirementUsed += deductible.annuity_insurance;
+                
+                totalDeductions += (deductible.provident_fund + deductible.nsf + deductible.rmf + deductible.ssf + deductible.annuity_insurance);
+                
+                // TESG (กลุ่มแยก)
+                deductible.tesg = Math.min(d.tesg, 100000);
+                totalDeductions += deductible.tesg;
+
+
+                return {
+                    totalInvestmentDeductions: totalDeductions,
+                    deductible: deductible 
+                };
+            }
+
+            /**
+             * S4. ค่าลดหย่อนอื่นๆ และบริจาค (Other & Donation Deductions)
+             */
+            function calculateOtherDonationDeductions(d, incomeAfterExpense, deductionBeforeDonation) {
+                let totalDeductions = 0;
+                let deductible = {};
+
+                // ดอกเบี้ยบ้าน
+                deductible.housing_interest = Math.min(d.housing_interest, 100000);
+                totalDeductions += deductible.housing_interest;
+
+                // บริจาคพรรคการเมือง
+                deductible.political_donation = Math.min(d.political_donation, 10000);
+                totalDeductions += deductible.political_donation;
+
+                // *** กลุ่มบริจาค (คิดทีหลังสุด) ***
+                let netIncomeBeforeDonation = incomeAfterExpense - (deductionBeforeDonation + totalDeductions);
+                netIncomeBeforeDonation = Math.max(0, netIncomeBeforeDonation);
+                let donationCap = netIncomeBeforeDonation * 0.1; // 10% ของเงินได้หลังหักลดหย่อนอื่นๆ
+                
+                // บริจาคทั่วไป (1x) + บริจาคการศึกษา/กีฬา/โรงพยาบาล (2x)
+                let totalDonationValue = (d.donation_education * 2) + d.donation_general;
+                let actualDonationCap = donationCap + d.donation_education; // เพดานรวม: 10% ของเงินได้ (1x) + จำนวนบริจาคการศึกษา (1x)
+                
+                deductible.donations = Math.min(totalDonationValue, actualDonationCap);
+                
+                totalDeductions += deductible.donations;
+
+                return {
+                    totalOtherDonationDeductions: totalDeductions,
+                    deductible: deductible
+                };
+            }
+            
+            /**
+             * S5. กลุ่มมาตรการส่งเสริมเศรษฐกิจ (Govt Incentive Deductions)
+             */
+             function calculateGovtIncentiveDeductions(d) {
+                let totalDeductions = 0;
+                let deductible = {};
+
+                deductible.e_receipt = Math.min(d.e_receipt, 50000);
+                totalDeductions += deductible.e_receipt;
+                
+                deductible.otop = Math.min(d.otop, 20000);
+                totalDeductions += deductible.otop;
+                
+                deductible.travel = Math.min(d.travel, 30000);
+                totalDeductions += deductible.travel;
+                
+                deductible.new_home_interest = Math.min(d.new_home_interest, 10000);
+                totalDeductions += deductible.new_home_interest;
+
+                return {
+                    totalGovtIncentiveDeductions: totalDeductions,
+                    deductible: deductible
+                };
+            }
+
+            /**
+             * 2.5. คำนวณภาษีแบบขั้นบันได (Sub-function)
+             */
+            function calculateProgressiveTax(income) {
+                if (income <= 150000) return 0;
+                
+                let tax = 0;
+                let remaining = income;
+                
+                const bands = [
+                    { limit: 5000000, rate: 0.35 },
+                    { limit: 2000000, rate: 0.30 },
+                    { limit: 1000000, rate: 0.25 },
+                    { limit: 750000, rate: 0.20 },
+                    { limit: 500000, rate: 0.15 },
+                    { limit: 300000, rate: 0.10 },
+                    { limit: 150000, rate: 0.05 },
+                    { limit: 0, rate: 0 } // Base
+                ];
+                
+                for (let i = 0; i < bands.length - 1; i++) {
+                    const currentBand = bands[i];
+                    const nextBandLimit = bands[i+1].limit;
+                    
+                    if (remaining > currentBand.limit) {
+                        tax += (remaining - currentBand.limit) * currentBand.rate;
+                        remaining = currentBand.limit;
+                    }
+                }
+                
+                // ส่วนสุดท้าย (150,001 - 300,000)
+                if (remaining > 150000) {
+                    tax += (remaining - 150000) * 0.05;
+                }
+                
+                return Math.max(0, tax);
+            }
+            
+            /**
+             * 2.6. หาฐานภาษีสูงสุด (Sub-function)
+             */
+            function getMarginalRate(income) {
+                if (income <= 150000) return 0;
+                if (income <= 300000) return 0.05;
+                if (income <= 500000) return 0.10;
+                if (income <= 750000) return 0.15;
+                if (income <= 1000000) return 0.20;
+                if (income <= 2000000) return 0.25;
+                if (income <= 5000000) return 0.30;
+                return 0.35;
+            }
+
+            /**
+             * 2.7. คำนวณโอกาสประหยัดภาษี (Sub-function)
+             */
+            function calculateOpportunities(deductible, marginalRate, netTaxableIncome) {
+                if (netTaxableIncome <= 150000 || marginalRate === 0) {
+                    return {
+                        life: { current: 0, remaining: 0, saving: 0 },
+                        annuity: { current: 0, remaining: 0, saving: 0 },
+                        tesg: { current: 0, remaining: 0, saving: 0 },
+                        totalSaving: 0
+                    };
+                }
+                
+                let remainingTaxableIncome = netTaxableIncome - 150000;
+                let totalSaving = 0;
+                
+                // --- 1. กลุ่มประกันชีวิต + สุขภาพ (100k) ---
+                const lifeHealthMax = 100000;
+                const lifeHealthCurrent = deductible.life_health_combined;
+                const lifeHealthRemaining = Math.max(0, lifeHealthMax - lifeHealthCurrent);
+                
+                const lifeHealthReducible = Math.min(lifeHealthRemaining, remainingTaxableIncome);
+                const lifeHealthSaving = lifeHealthReducible * marginalRate;
+                totalSaving += lifeHealthSaving;
+                remainingTaxableIncome -= lifeHealthReducible;
+
+                // --- 2. กลุ่มเกษียณ (500k) ---
+                const retirementCap = 500000;
+                const retirementUsed = (deductible.provident_fund || 0) + (deductible.nsf || 0) + (deductible.rmf || 0) + (deductible.ssf || 0) + (deductible.annuity_insurance || 0);
+                const retirementRemaining = Math.max(0, retirementCap - retirementUsed);
+                
+                const retirementReducible = Math.min(retirementRemaining, remainingTaxableIncome);
+                const retirementSaving = retirementReducible * marginalRate;
+                totalSaving += retirementSaving;
+                remainingTaxableIncome -= retirementReducible;
+                
+                // --- 3. TESG (100k) ---
+                const tesgMax = 100000;
+                const tesgCurrent = deductible.tesg;
+                const tesgRemaining = Math.max(0, tesgMax - tesgCurrent);
+                
+                const tesgReducible = Math.min(tesgRemaining, remainingTaxableIncome);
+                const tesgSaving = tesgReducible * marginalRate;
+                totalSaving += tesgSaving;
+
+                return {
+                    life: {
+                        current: lifeHealthCurrent,
+                        remaining: lifeHealthRemaining,
+                        saving: lifeHealthSaving
+                    },
+                    annuity: {
+                        current: retirementUsed,
+                        remaining: retirementRemaining,
+                        saving: retirementSaving
+                    },
+                    tesg: {
+                        current: tesgCurrent,
+                        remaining: tesgRemaining,
+                        saving: tesgSaving
+                    },
+                    totalSaving: totalSaving
+                };
+            }
+
+            /**
+             * 3. แสดงผลลัพธ์ (Render Function)
+             */
+            function displayResults(response) {
+                const s = response.summary;
+                const o = response.opportunities;
+                
+                // สรุปผลหลัก
+                document.getElementById('res-total-income-after-expense').textContent = formatNum(s.totalIncomeAfterExpense) + ' บ.';
+                document.getElementById('res-total-deduction').textContent = formatNum(s.totalDeductions) + ' บ.';
+                document.getElementById('res-net-taxable-income').textContent = formatNum(s.netTaxableIncome) + ' บ.';
+                document.getElementById('res-marginal-rate').textContent = (s.marginalRate * 100).toFixed(0) + '%';
+                
+                // ภาษีสุดท้าย
+                document.getElementById('res-total-tax').textContent = formatNum2f(s.totalTax) + ' บ.';
+                
+                // ซ่อน/แสดงคำเตือน 150k
+                const warning150k = document.getElementById('res-net-income-warning');
+                if (s.netTaxableIncome <= 150000 && s.totalIncome > 0) {
+                    warning150k.classList.remove('hidden');
+                } else {
+                    warning150k.classList.add('hidden');
+                }
+                
+                // โอกาส
+                document.getElementById('opp-life-current').textContent = formatNum(o.life.current) + ' บ.';
+                document.getElementById('opp-life-remaining').textContent = formatNum(o.life.remaining) + ' บ.';
+                document.getElementById('opp-life-saving').textContent = formatNum2f(o.life.saving) + ' บ.';
+                
+                document.getElementById('opp-annuity-current').textContent = formatNum(o.annuity.current) + ' บ.';
+                document.getElementById('opp-annuity-remaining').textContent = formatNum(o.annuity.remaining) + ' บ.';
+                document.getElementById('opp-annuity-saving').textContent = formatNum2f(o.annuity.saving) + ' บ.';
+                
+                document.getElementById('opp-tesg-current').textContent = formatNum(o.tesg.current) + ' บ.';
+                document.getElementById('opp-tesg-remaining').textContent = formatNum(o.tesg.remaining) + ' บ.';
+                document.getElementById('opp-tesg-saving').textContent = formatNum2f(o.tesg.saving) + ' บ.';
+                
+                // รวม
+                document.getElementById('opp-total-saving').textContent = formatNum2f(o.totalSaving) + ' บ.';
+            }
+
+        });
+    </script>
+
+</body>
+</html>
