@@ -494,11 +494,6 @@ document.getElementById('resetBtn').addEventListener('click', ()=>{
 });
 
 /* Initialize: open incomes for first use */
-function setIncOpen(s){
-  incOpen = !!s;
-  incContent.style.display = incOpen ? 'block' : 'none';
-  incOpenBtn.textContent = incOpen ? 'ซ่อน' : 'เปิด';
-}
 setIncOpen(false);
 </script>
 </body>
