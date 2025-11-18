@@ -1,500 +1,709 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>เครื่องคำนวณภาษี - แบบละเอียด (One-file)</title>
-<style>
-:root{
-  --bg: linear-gradient(180deg,#f6fbff 0%, #f3f6fa 100%);
-  --card:#ffffff;
-  --accent:#0f4c81;
-  --accent-2:#0a3a63;
-  --muted:#6b7280;
-  --glass: rgba(15,76,129,0.06);
-  --success:#0a8a39;
-  --danger:#c4302b;
-  --radius:12px;
-  --trans: .12s;
-}
-*{box-sizing:border-box;font-family:Inter, "Noto Sans Thai", "Segoe UI", Roboto, Arial; color:#1a1f2b}
-html,body{height:100%;margin:0;background:var(--bg)}
-.container{max-width:1100px;margin:20px auto;padding:18px;}
-.header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.logo{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;color:white;font-weight:800;box-shadow:0 6px 22px rgba(15,76,129,0.18)}
-h1{font-size:20px;margin:0;color:var(--accent)}
-.subtitle{color:var(--muted);font-size:13px;margin-top:6px}
-
-/* layout */
-.grid{display:grid;grid-template-columns:1fr 420px;gap:18px;}
-@media(max-width:1100px){.grid{grid-template-columns:1fr}}
-.card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:0 8px 24px rgba(12,18,28,0.06);border:1px solid rgba(15,76,129,0.04)}
-.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.section-title h2{font-size:16px;margin:0;color:var(--accent)}
-.row{display:flex;gap:10px;align-items:center;margin:8px 0}
-label{min-width:170px;color:var(--muted);font-size:14px}
-input[type=number], select, input[type=text]{flex:1;padding:10px;border-radius:8px;border:1px solid #e6edf6;background:var(--glass);font-size:15px}
-.small{min-width:110px}
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-
-/* collapsible */
-.collapsible { border-radius:10px;padding:10px;background:#fbfdff;border:1px solid rgba(15,76,129,0.04); }
-.collapsible .title {display:flex;justify-content:space-between;align-items:center;cursor:pointer}
-.collapsible .content {margin-top:10px;display:none;}
-
-/* buttons - modern with press effect */
-.btn{display:inline-block;padding:10px 16px;border-radius:10px;font-weight:700;border:none;cursor:pointer;transition:transform var(--trans), box-shadow var(--trans);box-shadow:0 8px 20px rgba(15,76,129,0.12)}
-.btn.primary{background:linear-gradient(180deg,var(--accent),var(--accent-2));color:white}
-.btn.secondary{background:#f4f7fb;border:1px solid rgba(15,76,129,0.06);color:var(--accent);font-weight:700}
-.btn.ghost{background:transparent;border:1px solid rgba(15,76,129,0.08);color:var(--accent)}
-.btn:active{transform:translateY(2px) scale(.997);box-shadow:0 6px 12px rgba(0,0,0,0.06) inset}
-
-/* result panel */
-.result-summary{padding:12px;border-radius:10px;background:linear-gradient(180deg,#fbfdff,#f7fbff);border:1px solid rgba(0,0,0,0.03)}
-.kv{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed rgba(0,0,0,0.03)}
-.kv strong{color:var(--accent)}
-.note{color:var(--muted);font-size:13px;margin-top:8px}
-
-/* small helper */
-.small-muted{font-size:12px;color:var(--muted)}
-.table{width:100%;border-collapse:collapse;margin-top:8px}
-.table th, .table td{padding:8px;border-bottom:1px solid #f1f5f9;text-align:left;font-size:14px}
-.table th{color:var(--muted);font-weight:600}
-
-/* responsive */
-@media(max-width:760px){
-  label{min-width:120px}
-  .grid{grid-template-columns:1fr}
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>คำนวณภาษีเงินได้บุคคลธรรมดา</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .section-card {
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }
+        .section-header {
+            background-color: #f8f9fa;
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section-body {
+            padding: 15px;
+        }
+        .hidden {
+            display: none;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .tax-bracket {
+            margin-left: 20px;
+            font-size: 0.9em;
+        }
+        .result-section {
+            background-color: #e9f7ef;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .savings-section {
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .form-section {
+            margin-bottom: 15px;
+        }
+        .form-label {
+            font-weight: 500;
+        }
+        .highlight {
+            font-weight: bold;
+            color: #dc3545;
+        }
+        .positive {
+            color: #28a745;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="logo">T</div>
-      <div>
-        <h1>เครื่องคำนวณภาษี (ละเอียด)</h1>
-        <div class="subtitle">กรอกครบตามรายการที่มีผลต่อการคำนวณภาษี — แสดง/ซ่อนรายละเอียดเพื่อไม่ให้รก</div>
-      </div>
-    </div>
-
-    <div class="grid">
-      <!-- LEFT: form -->
-      <div class="card">
-        <!-- Collapsible: Income types -->
-        <div class="section-title"><h2>1) เงินได้พึงประเมิน (8 ประเภท)</h2><div class="small-muted">กดเพื่อเปิด/กรอกแต่ละประเภท</div></div>
-
-        <div class="collapsible" id="incomeColl">
-          <div class="title" id="incToggle">
-            <div>คลิกเพื่อกรอกเงินได้พึงประเมินทั้ง 8 ประเภท</div>
-            <div><button id="incOpenBtn" class="btn secondary">เปิด/ปิด</button></div>
-          </div>
-          <div class="content" id="incContent">
-            <p class="small-muted">เลือก checkbox ที่ต้องการระบุ แล้วกรอกจำนวนเป็น 'รายได้ต่อปี' จากนั้นเลือกวิธีหักค่าใช้จ่าย (เหมา/หักจริง) หากเลือกหักจริงให้กรอกค่าใช้จ่ายจริง</p>
-
-            <table class="table" id="incomeTable">
-              <thead><tr><th>#</th><th>ประเภทเงินได้</th><th>ใช้?</th><th>รายได้ (บาท/ปี)</th><th>วิธีหักค่าใช้จ่าย</th><th>ค่าใช้จ่ายที่ใช้</th><th>รายได้หลังหัก</th></tr></thead>
-              <tbody>
-                <!-- rows inserted by JS -->
-              </tbody>
-            </table>
-
-            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
-              <button id="incConfirm" class="btn primary">ยืนยันและพับ</button>
-              <button id="incClear" class="btn ghost">ล้างค่า</button>
+    <div class="container my-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <h1 class="text-center mb-4">คำนวณภาษีเงินได้บุคคลธรรมดา</h1>
+                
+                <!-- ส่วนกรอกข้อมูลเงินได้พึงประเมิน -->
+                <div class="section-card">
+                    <div class="section-header" id="income-header">
+                        <h5 class="mb-0">เงินได้พึงประเมิน</h5>
+                        <span class="badge bg-secondary" id="income-summary">0 บาท</span>
+                    </div>
+                    <div class="section-body" id="income-body">
+                        <p class="text-muted mb-3">กรุณาระบุรายละเอียดเงินได้ตามประเภทต่างๆ</p>
+                        
+                        <!-- ประเภทที่ 1: เงินได้จากงานประจำ -->
+                        <div class="form-section">
+                            <h6>ประเภทที่ 1: เงินได้จากการจ้างงาน</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">เงินเดือน/ค่าจ้าง</label>
+                                    <input type="number" class="form-control income-input" id="income-type1" data-type="1" placeholder="0">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">เงินได้อื่นๆ จากงานประจำ</label>
+                                    <input type="number" class="form-control income-input" id="income-type1-other" data-type="1" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ประเภทที่ 2: เงินได้จากการรับจ้างทำของ -->
+                        <div class="form-section">
+                            <h6>ประเภทที่ 2: เงินได้จากการรับจ้างทำของ</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">รายได้จากการรับจ้างทำของ</label>
+                                    <input type="number" class="form-control income-input" id="income-type2" data-type="2" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ประเภทที่ 3: ค่าสิทธิ -->
+                        <div class="form-section">
+                            <h6>ประเภทที่ 3: ค่าสิทธิ</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">ค่าลิขสิทธิ์/สิทธิบัตร</label>
+                                    <input type="number" class="form-control income-input" id="income-type3" data-type="3" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ประเภทที่ 4: ดอกเบี้ย เงินปันผล -->
+                        <div class="form-section">
+                            <h6>ประเภทที่ 4: ดอกเบี้ย เงินปันผล ฯลฯ</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">ดอกเบี้ยรับ</label>
+                                    <input type="number" class="form-control income-input" id="income-type4-1" data-type="4" placeholder="0">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">เงินปันผล</label>
+                                    <input type="number" class="form-control income-input" id="income-type4-2" data-type="4" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ประเภทที่ 5: เงินได้จากการให้เช่าทรัพย์สิน -->
+                        <div class="form-section">
+                            <h6>ประเภทที่ 5: เงินได้จากการให้เช่าทรัพย์สิน</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">ค่าเช่าอสังหาริมทรัพย์</label>
+                                    <input type="number" class="form-control income-input" id="income-type5" data-type="5" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ประเภทที่ 6: เงินได้จากวิชาชีพอิสระ -->
+                        <div class="form-section">
+                            <h6>ประเภทที่ 6: เงินได้จากวิชาชีพอิสระ</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">รายได้จากวิชาชีพอิสระ</label>
+                                    <input type="number" class="form-control income-input" id="income-type6" data-type="6" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ประเภทที่ 7: เงินได้จากการรับเหมา -->
+                        <div class="form-section">
+                            <h6>ประเภทที่ 7: เงินได้จากการรับเหมา</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">รายได้จากการรับเหมา</label>
+                                    <input type="number" class="form-control income-input" id="income-type7" data-type="7" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ประเภทที่ 8: เงินได้จากธุรกิจ การค้า เกษตร -->
+                        <div class="form-section">
+                            <h6>ประเภทที่ 8: เงินได้จากธุรกิจ การค้า เกษตร</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">รายได้จากธุรกิจ/การค้า</label>
+                                    <input type="number" class="form-control income-input" id="income-type8" data-type="8" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-primary mt-3" id="confirm-income">ยืนยันเงินได้พึงประเมิน</button>
+                    </div>
+                </div>
+                
+                <!-- ส่วนกรอกข้อมูลลดหย่อนภาษี -->
+                <div class="section-card">
+                    <div class="section-header" id="deductions-header">
+                        <h5 class="mb-0">ค่าลดหย่อนภาษี</h5>
+                        <span class="badge bg-secondary" id="deductions-summary">0 บาท</span>
+                    </div>
+                    <div class="section-body hidden" id="deductions-body">
+                        <p class="text-muted mb-3">กรุณาระบุรายการลดหย่อนภาษี</p>
+                        
+                        <!-- ส่วนลดหย่อนประกันชีวิตและสุขภาพ -->
+                        <div class="form-section">
+                            <h6>ประกันชีวิตและสุขภาพ</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">เบี้ยประกันชีวิต</label>
+                                    <input type="number" class="form-control deduction-input" id="deduction-life" placeholder="0">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">เบี้ยประกันสุขภาพ</label>
+                                    <input type="number" class="form-control deduction-input" id="deduction-health" placeholder="0">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">เบี้ยประกันโรคภัย</label>
+                                    <input type="number" class="form-control deduction-input" id="deduction-illness" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ส่วนลดหย่อนประกันบำนาญ -->
+                        <div class="form-section">
+                            <h6>ประกันบำนาญ</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">เบี้ยประกันบำนาญ</label>
+                                    <input type="number" class="form-control deduction-input" id="deduction-pension" placeholder="0">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">เงินสะสมกองทุนสำรองเลี้ยงชีพ</label>
+                                    <input type="number" class="form-control deduction-input" id="deduction-pvf" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ส่วนลดหย่อนอื่นๆ -->
+                        <div class="form-section">
+                            <h6>ค่าลดหย่อนอื่นๆ</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">เงินบริจาค</label>
+                                    <input type="number" class="form-control deduction-input" id="deduction-donation" placeholder="0">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">ดอกเบี้ยกู้ยืมที่อยู่อาศัย</label>
+                                    <input type="number" class="form-control deduction-input" id="deduction-housing-loan" placeholder="0">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">ค่าลดหย่อนส่วนตัว</label>
+                                    <input type="number" class="form-control" id="deduction-personal" value="60000" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">ค่าลดหย่อนคู่สมรส</label>
+                                    <input type="number" class="form-control deduction-input" id="deduction-spouse" placeholder="0">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">ค่าลดหย่อนบุตร</label>
+                                    <input type="number" class="form-control deduction-input" id="deduction-children" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-primary mt-3" id="confirm-deductions">ยืนยันค่าลดหย่อน</button>
+                    </div>
+                </div>
+                
+                <!-- ส่วนแสดงผลการคำนวณภาษี -->
+                <div class="section-card">
+                    <div class="section-header" id="results-header">
+                        <h5 class="mb-0">ผลการคำนวณภาษี</h5>
+                    </div>
+                    <div class="section-body hidden" id="results-body">
+                        <div class="summary-row">
+                            <span>เงินได้พึงประเมินรวม:</span>
+                            <span id="total-income">0 บาท</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>หักค่าใช้จ่าย:</span>
+                            <span id="total-expenses">0 บาท</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>เงินได้สุทธิ:</span>
+                            <span id="net-income">0 บาท</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>หักค่าลดหย่อน:</span>
+                            <span id="total-deductions">0 บาท</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>เงินได้หลังหักลดหย่อน:</span>
+                            <span id="taxable-income">0 บาท</span>
+                        </div>
+                        
+                        <div class="result-section">
+                            <h5>ภาษีที่ต้องชำระ: <span id="tax-amount" class="highlight">0 บาท</span></h5>
+                            <div id="tax-breakdown" class="tax-bracket"></div>
+                        </div>
+                        
+                        <div class="savings-section">
+                            <h6>การลดหย่อนเพิ่มเติมเพื่อประหยัดภาษี</h6>
+                            <div class="summary-row">
+                                <span>ลดหย่อนประกันชีวิตและสุขภาพได้อีกสูงสุด:</span>
+                                <span id="max-life-health">0 บาท</span>
+                            </div>
+                            <div class="summary-row">
+                                <span>ลดหย่อนประกันบำนาญได้อีกสูงสุด:</span>
+                                <span id="max-pension">0 บาท</span>
+                            </div>
+                            <div class="summary-row">
+                                <span>ช่วยประหยัดภาษีได้สูงสุด:</span>
+                                <span id="potential-savings" class="positive">0 บาท (0%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <button class="btn btn-success btn-lg" id="calculate-tax">คำนวณภาษี</button>
+                    <button class="btn btn-secondary btn-lg" id="reset-form">เริ่มใหม่</button>
+                </div>
             </div>
-          </div>
         </div>
-
-        <hr style="margin:14px 0"/>
-
-        <!-- Other main inputs -->
-        <div class="section-title"><h2>2) รายการลดหย่อน (ทั่วไป)</h2><div class="small-muted">กรอกตามจริง / ใช้ dropdown เมื่อเป็นค่าคงที่</div></div>
-
-        <div class="row"><label>ค่าลดหย่อนส่วนตัว</label><input id="personal" type="number" value="60000" min="0"></div>
-        <div class="row"><label>คู่สมรส (ไม่มีรายได้)</label><input id="spouse" type="number" value="0" min="0"></div>
-        <div class="row"><label>จำนวนบุตร (คน)</label><input id="children" type="number" value="0" min="0"></div>
-        <div class="row"><label>e-Receipt (รวม)</label><input id="e_receipt" type="number" value="0" min="0"></div>
-        <div class="row"><label>เที่ยวดีมีคืน (รวม)</label><input id="travel" type="number" value="0" min="0"></div>
-        <div class="row"><label>สร้างบ้าน (ค่าใช้จ่าย)</label><input id="build_house" type="number" value="0" min="0"></div>
-        <div class="row"><label>ดอกเบี้ยกู้เพื่อที่อยู่อาศัย</label><input id="mortgage_interest" type="number" value="0" min="0"></div>
-
-        <hr style="margin:14px 0"/>
-
-        <div class="section-title"><h2>3) เบี้ยประกัน (ปี) — ประเมินสิทธิ์</h2><div class="small-muted">ระบบจะประเมินสิทธิลดหย่อนที่เหลือ</div></div>
-
-        <div class="row"><label>เบี้ยชีวิต + สุขภาพ (ปี)</label><input id="life_health" type="number" value="0" min="0"></div>
-        <div class="row"><label>เบี้ยบำนาญ / บำเหน็จ (ปี)</label><input id="pension" type="number" value="0" min="0"></div>
-
-        <hr style="margin:14px 0"/>
-
-        <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
-          <button id="calcBtn" class="btn primary">คำนวณภาษีแบบละเอียด</button>
-          <button id="resetBtn" class="btn ghost">รีเซ็ตฟอร์ม</button>
-          <div style="flex:1"></div>
-        </div>
-
-        <div class="note" style="margin-top:10px">หมายเหตุ: ฟิลด์หลายรายการมี cap/limit (ระบบจะใช้ค่า cap ที่ตั้งไว้) — คุณสามารถปรับค่าคงที่ในตัวแปร JS ถ้าต้องการ</div>
-      </div>
-
-      <!-- RIGHT: result -->
-      <div class="card">
-        <div class="section-title"><h2>ผลลัพธ์ (สรุป)</h2><div class="small-muted">แสดงผลรวม ไม่รก</div></div>
-        <div id="resultPanel" class="result-summary" style="display:none">
-          <div class="kv"><div>รวมเงินได้พึงประเมิน (หลังหักค่าใช้จ่าย)</div><div id="r_income_total">-</div></div>
-          <div class="kv"><div>รวมค่าลดหย่อนที่ใช้นำมาคิด</div><div id="r_deductions">-</div></div>
-          <div class="kv"><div>เงินได้สุทธิ (นำคำนวณภาษี)</div><div id="r_taxable">-</div></div>
-          <div class="kv"><div style="font-size:15px">ภาษีที่ต้องชำระ</div><div style="font-size:15px;color:var(--accent)"><strong id="r_tax">-</strong></div></div>
-
-          <hr style="margin:10px 0"/>
-
-          <div class="section-title"><h2 style="font-size:15px">สิทธิ์ลดหย่อนเพิ่มเติม (ประเมิน)</h2><div class="small-muted">ชีวต+สุขภาพ / บำนาญ</div></div>
-
-          <div class="kv"><div>ชีวต+สุขภาพ (cap)</div><div id="r_life_cap">-</div></div>
-          <div class="kv"><div>ใช้ไปแล้ว (life)</div><div id="r_life_used">-</div></div>
-          <div class="kv"><div>ยังใช้ได้ (life)</div><div id="r_life_remain">-</div></div>
-          <div class="kv"><div>ประมาณประหยัดภาษี (life)</div><div id="r_life_save">-</div></div>
-
-          <div style="height:6px"></div>
-
-          <div class="kv"><div>บำนาญ (cap)</div><div id="r_pension_cap">-</div></div>
-          <div class="kv"><div>ใช้ไปแล้ว (pension)</div><div id="r_pension_used">-</div></div>
-          <div class="kv"><div>ยังใช้ได้ (pension)</div><div id="r_pension_remain">-</div></div>
-          <div class="kv"><div>ประมาณประหยัดภาษี (pension)</div><div id="r_pension_save">-</div></div>
-
-          <div class="note" id="calcNote"></div>
-
-          <hr style="margin:10px 0"/>
-          <div class="small-muted">หากต้องการดูรายละเอียดแยกรายการเงินได้ ให้กดปุ่ม "เงินได้พึงประเมิน" ด้านซ้ายเพื่อขยาย</div>
-        </div>
-
-        <div id="emptyPanel" style="text-align:center;padding:22px;color:var(--muted)">
-          กดปุ่ม "คำนวณภาษีแบบละเอียด" ด้านซ้ายเพื่อประมวลผล
-        </div>
-      </div>
     </div>
-  </div>
 
-<script>
-/* ========== Constants (ปรับได้) ========== */
-const CONSTANTS = {
-  personal_allowance: 60000,
-  e_receipt_cap: 50000,
-  travel_cap: 30000,
-  build_house_cap: 100000,
-  mortgage_interest_cap: 100000,
-  life_health_cap: 100000,
-  pension_cap: 200000
-};
-
-// Tax brackets progressive (lower bound, rate)
-const BRACKETS = [
-  [0, 0.00],
-  [150000, 0.00],
-  [300000, 0.05],
-  [500000, 0.10],
-  [750000, 0.15],
-  [1000000, 0.20],
-  [2000000, 0.25],
-  [5000000, 0.30],
-  [Number.MAX_SAFE_INTEGER, 0.35]
-];
-
-/* ========== Helper arithmetic functions (avoid FP issues) ========== */
-function toInt(n){ n = Number(n); if (!isFinite(n)) return 0; return Math.round(n); }
-function money(n){ return toInt(n).toLocaleString('en-US') + ' ฿'; }
-
-/* ========== Income types setup (8 types) ========== */
-/*
-  We will list 8 rows. For each:
-  - id: 1..8
-  - label: Thai short description (you can replace labels to match official)
-  - defaultStandard: default standard % or rule (we implement options)
-  Available expense method options:
-   - "none" (not used)
-   - "standard_50_up100k" (50% up to 100k)   [for type1]
-   - "standard_percent" (choose percent)     [for general]
-   - "actual" (user enters)
-*/
-const incomeTypes = [
-  {id:1, label:'ประเภท 1: เงินเดือน ค่าจ้าง', note:'หักเหมา 50% ไม่เกิน 100,000'},
-  {id:2, label:'ประเภท 2: เบี้ยหวังผล/รายได้จากทรัพย์สิน', note:''},
-  {id:3, label:'ประเภท 3: ค่าจ้างอาชีพอิสระ', note:''},
-  {id:4, label:'ประเภท 4: ดอกเบี้ย', note:''},
-  {id:5, label:'ประเภท 5: ค่าจ้าง/เงินได้พิเศษ', note:''},
-  {id:6, label:'ประเภท 6: ค่าเช่า/รายได้อสังหา', note:''},
-  {id:7, label:'ประเภท 7: รายได้ทางการลงทุน (ปันผล ฯลฯ)', note:''},
-  {id:8, label:'ประเภท 8: ธุรกิจ/รับเหมา', note:'หักเหมา 40%-60% หรือหักจริง'}
-];
-
-/* Insert table rows dynamically */
-const tbody = document.querySelector('#incomeTable tbody');
-incomeTypes.forEach(it => {
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td style="width:28px">${it.id}</td>
-    <td>${it.label}<div class="small-muted">${it.note}</div></td>
-    <td style="width:80px"><input type="checkbox" class="inc-use" data-id="${it.id}"></td>
-    <td style="width:140px"><input class="inc-amount" data-id="${it.id}" type="number" min="0" step="1" value="0" style="width:100%"></td>
-    <td style="width:220px">
-      <select class="inc-method" data-id="${it.id}">
-        <option value="standard_default">ใช้สูตรมาตรฐาน</option>
-        <option value="standard_50_100k">หักเหมา 50% (สูงสุด 100,000)</option>
-        <option value="standard_40">หักเหมา 40%</option>
-        <option value="standard_60">หักเหมา 60%</option>
-        <option value="actual">หักจริง (ระบุ)</option>
-      </select>
-    </td>
-    <td style="width:150px"><input class="inc-expense" data-id="${it.id}" type="number" min="0" step="1" value="0" disabled style="width:100%"></td>
-    <td style="width:130px"><div class="small-muted inc-net" data-id="${it.id}">0 ฿</div></td>
-  `;
-  tbody.appendChild(tr);
-});
-
-/* ========== Collapsible logic ========== */
-const incToggle = document.getElementById('incToggle');
-const incContent = document.getElementById('incContent');
-const incOpenBtn = document.getElementById('incOpenBtn');
-let incOpen = false;
-function setIncOpen(s){
-  incOpen = !!s;
-  incContent.style.display = incOpen ? 'block' : 'none';
-  incOpenBtn.textContent = incOpen ? 'ซ่อน' : 'เปิด';
-}
-incToggle.addEventListener('click', ()=> setIncOpen(!incOpen));
-setIncOpen(false);
-
-/* Enable expense input when method=actual */
-document.querySelectorAll('.inc-method').forEach(sel=>{
-  sel.addEventListener('change', (e)=>{
-    const id = sel.dataset.id;
-    const expInput = document.querySelector('.inc-expense[data-id="'+id+'"]');
-    if (sel.value === 'actual') { expInput.disabled = false; }
-    else { expInput.disabled = true; expInput.value = 0; updateNetForId(id); }
-    updateNetForId(id);
-  });
-});
-
-/* when amount or expense change, update net display live */
-document.querySelectorAll('.inc-amount, .inc-expense, .inc-use').forEach(inp=>{
-  inp.addEventListener('input', (e)=>{
-    const id = inp.dataset.id;
-    updateNetForId(id);
-  });
-});
-
-/* Calculate net per ID according to selected method */
-function updateNetForId(id){
-  const useChk = document.querySelector('.inc-use[data-id="'+id+'"]');
-  const amount = toInt(document.querySelector('.inc-amount[data-id="'+id+'"]').value || 0);
-  const method = document.querySelector('.inc-method[data-id="'+id+'"]').value;
-  const expenseInput = document.querySelector('.inc-expense[data-id="'+id+'"]');
-  let expenseUsed = 0;
-  if (!useChk.checked){
-    expenseUsed = 0;
-  } else {
-    if (method === 'actual'){
-      expenseUsed = toInt(expenseInput.value || 0);
-    } else if (method === 'standard_50_100k'){
-      expenseUsed = Math.min(Math.round(amount * 0.5), 100000);
-    } else if (method === 'standard_40'){
-      expenseUsed = Math.round(amount * 0.4);
-    } else if (method === 'standard_60'){
-      expenseUsed = Math.round(amount * 0.6);
-    } else {
-      // standard_default: fallback to 50% up to 100k for type 1 (id=1), else 50% no cap
-      if (parseInt(id) === 1){
-        expenseUsed = Math.min(Math.round(amount * 0.5), 100000);
-      } else {
-        expenseUsed = Math.round(amount * 0.5);
-      }
-    }
-  }
-  let net = Math.max(0, amount - expenseUsed);
-  document.querySelector('.inc-net[data-id="'+id+'"]').textContent = money(net);
-  // store as data attributes for later summary
-  document.querySelector('.inc-net[data-id="'+id+'"]').dataset.net = net;
-  document.querySelector('.inc-net[data-id="'+id+'"]').dataset.expense = expenseUsed;
-  document.querySelector('.inc-net[data-id="'+id+'"]').dataset.amount = amount;
-}
-
-/* update all initially */
-incomeTypes.forEach(it => updateNetForId(it.id));
-
-/* Confirm incomes: fold and show totals in a brief summary */
-document.getElementById('incConfirm').addEventListener('click', ()=>{
-  // compute totals for selected types
-  let totalNet = 0;
-  const details = [];
-  incomeTypes.forEach(it=>{
-    const id = it.id;
-    const use = document.querySelector('.inc-use[data-id="'+id+'"]').checked;
-    const amount = toInt(document.querySelector('.inc-amount[data-id="'+id+'"]').value || 0);
-    const exp = toInt(document.querySelector('.inc-expense[data-id="'+id+'"]').value || 0);
-    const method = document.querySelector('.inc-method[data-id="'+id+'"]').value;
-    const storedNet = parseInt(document.querySelector('.inc-net[data-id="'+id+'"]').dataset.net || 0);
-    if (use){
-      totalNet += storedNet;
-      details.push({id, label:it.label, amount, expense: parseInt(document.querySelector('.inc-net[data-id="'+id+'"]').dataset.expense || 0), net: storedNet, method});
-    }
-  });
-  // show abbreviated summary at top of collapsible title
-  const titleDiv = incToggle.querySelector('div');
-  titleDiv.textContent = `เงินได้พึงประเมินรวม (หลังหักค่าใช้จ่ายแล้ว) = ${money(totalNet)} — กดเพื่อแก้ไข/ดูรายละเอียด`;
-  // store details for later calculation
-  incContent.dataset.summary = JSON.stringify({totalNet, details});
-  // fold
-  setIncOpen(false);
-});
-
-/* Clear incomes */
-document.getElementById('incClear').addEventListener('click', ()=>{
-  document.querySelectorAll('.inc-use').forEach(ch=> ch.checked = false);
-  document.querySelectorAll('.inc-amount').forEach(a=> a.value = 0);
-  document.querySelectorAll('.inc-expense').forEach(e=> { e.value = 0; e.disabled = true; });
-  document.querySelectorAll('.inc-net').forEach(n=> { n.textContent = '0 ฿'; n.dataset.net = 0; n.dataset.expense = 0; });
-  document.getElementById('incOpenBtn').textContent = 'เปิด/ปิด';
-  incToggle.querySelector('div').textContent = 'คลิกเพื่อกรอกเงินได้พึงประเมินทั้ง 8 ประเภท';
-  incContent.dataset.summary = '';
-  setIncOpen(true);
-});
-
-/* ========== Main calculation ========== */
-function computeProgressiveTax(netIncome){
-  let tax = 0;
-  for (let i=1;i<BRACKETS.length;i++){
-    const lower = BRACKETS[i-1][0];
-    const upper = BRACKETS[i][0];
-    const rate = BRACKETS[i][1];
-    if (netIncome <= lower) break;
-    const taxable = Math.min(netIncome, upper) - lower;
-    if (taxable > 0) tax += taxable * rate;
-    if (netIncome <= upper) break;
-  }
-  return Math.round(tax);
-}
-function marginalRateForIncome(netIncome){
-  for (let i=1;i<BRACKETS.length;i++){
-    const lower = BRACKETS[i-1][0];
-    const upper = BRACKETS[i][0];
-    const rate = BRACKETS[i][1];
-    if (netIncome > lower && netIncome <= upper) return rate;
-  }
-  return BRACKETS[BRACKETS.length-1][1];
-}
-
-/* On clicking calculate: gather everything, include income summary from collapsible */
-document.getElementById('calcBtn').addEventListener('click', ()=>{
-  // enable brief press effect
-  const btn = document.getElementById('calcBtn');
-  btn.disabled = true; btn.style.transform='translateY(2px) scale(.997)';
-  setTimeout(()=>{ btn.disabled=false; btn.style.transform=''; }, 280);
-
-  // get income summary from collapsible (if empty, compute from current table)
-  let incSummary = incContent.dataset.summary ? JSON.parse(incContent.dataset.summary) : null;
-  if (!incSummary){
-    // compute live totals
-    let totalNet = 0; let details=[];
-    incomeTypes.forEach(it=>{
-      const id = it.id;
-      const use = document.querySelector('.inc-use[data-id="'+id+'"]').checked;
-      if (!use) return;
-      const net = parseInt(document.querySelector('.inc-net[data-id="'+id+'"]').dataset.net || 0);
-      const amount = toInt(document.querySelector('.inc-amount[data-id="'+id+'"]').value || 0);
-      const expense = toInt(document.querySelector('.inc-net[data-id="'+id+'"]').dataset.expense || 0);
-      const method = document.querySelector('.inc-method[data-id="'+id+'"]').value;
-      totalNet += net;
-      details.push({id, label:it.label, amount, expense, net, method});
-    });
-    incSummary = { totalNet, details };
-  }
-
-  // fetch deductions
-  const personal = toInt(document.getElementById('personal').value || CONSTANTS.personal_allowance);
-  const spouse = toInt(document.getElementById('spouse').value || 0);
-  const children = toInt(document.getElementById('children').value || 0); // treat as amount if needed; else could multiply per-child allowance
-  const e_receipt = Math.min(toInt(document.getElementById('e_receipt').value || 0), CONSTANTS.e_receipt_cap);
-  const travel = Math.min(toInt(document.getElementById('travel').value || 0), CONSTANTS.travel_cap);
-  const build_house = Math.min(toInt(document.getElementById('build_house').value || 0), CONSTANTS.build_house_cap);
-  const mortgage_interest = Math.min(toInt(document.getElementById('mortgage_interest').value || 0), CONSTANTS.mortgage_interest_cap);
-
-  const life_health_raw = toInt(document.getElementById('life_health').value || 0);
-  const pension_raw = toInt(document.getElementById('pension').value || 0);
-  const life_health = Math.min(life_health_raw, CONSTANTS.life_health_cap);
-  const pension = Math.min(pension_raw, CONSTANTS.pension_cap);
-
-  // sum deductions (note: depending on accurate laws, children may be treated differently; here we add as entered amount)
-  const sum_deductions = personal + spouse + children + e_receipt + travel + build_house + mortgage_interest + life_health + pension;
-
-  // taxable income = incSummary.totalNet - sum_deductions
-  const income_after = incSummary.totalNet || 0;
-  const taxable = Math.max(0, income_after - sum_deductions);
-
-  const tax_payable = computeProgressiveTax(taxable);
-  const marginal = marginalRateForIncome(taxable);
-
-  // remaining capacities and approximate tax savings
-  const remain_life = Math.max(0, CONSTANTS.life_health_cap - life_health);
-  const remain_pension = Math.max(0, CONSTANTS.pension_cap - pension);
-  const life_save = Math.round(remain_life * marginal);
-  const pension_save = Math.round(remain_pension * marginal);
-
-  // render results
-  document.getElementById('r_income_total').textContent = money(income_after);
-  document.getElementById('r_deductions').textContent = money(sum_deductions);
-  document.getElementById('r_taxable').textContent = money(taxable);
-  document.getElementById('r_tax').textContent = money(tax_payable);
-
-  document.getElementById('r_life_cap').textContent = money(CONSTANTS.life_health_cap);
-  document.getElementById('r_life_used').textContent = money(life_health);
-  document.getElementById('r_life_remain').textContent = money(remain_life);
-  document.getElementById('r_life_save').textContent = money(life_save) + ` (${Math.round(marginal*100)}%)`;
-
-  document.getElementById('r_pension_cap').textContent = money(CONSTANTS.pension_cap);
-  document.getElementById('r_pension_used').textContent = money(pension);
-  document.getElementById('r_pension_remain').textContent = money(remain_pension);
-  document.getElementById('r_pension_save').textContent = money(pension_save) + ` (${Math.round(marginal*100)}%)`;
-
-  document.getElementById('calcNote').textContent = 'หมายเหตุ: การประเมินการประหยัดภาษีเป็นค่าประมาณโดยใช้ marginal tax rate ของเงินได้สุทธิที่คำนวณได้';
-
-  document.getElementById('resultPanel').style.display = 'block';
-  document.getElementById('emptyPanel').style.display = 'none';
-
-  // store last details (for potential export)
-  document.getElementById('resultPanel').dataset.details = JSON.stringify({ incomes: incSummary.details, deductions:{personal,spouse,children,e_receipt,travel,build_house,mortgage_interest,life_health,pension}, totals:{income_after, sum_deductions: sum_deductions, taxable, tax_payable}});
-});
-
-/* Reset button */
-document.getElementById('resetBtn').addEventListener('click', ()=>{
-  // clear incomes
-  document.querySelectorAll('.inc-use').forEach(ch=> ch.checked = false);
-  document.querySelectorAll('.inc-amount').forEach(a=> a.value = 0);
-  document.querySelectorAll('.inc-method').forEach(s=> s.value = 'standard_default');
-  document.querySelectorAll('.inc-expense').forEach(e=> { e.value = 0; e.disabled = true; });
-  document.querySelectorAll('.inc-net').forEach(n=> { n.textContent = '0 ฿'; n.dataset.net = 0; n.dataset.expense = 0; });
-
-  // other fields
-  document.getElementById('personal').value = CONSTANTS.personal_allowance;
-  document.getElementById('spouse').value = 0;
-  document.getElementById('children').value = 0;
-  document.getElementById('e_receipt').value = 0;
-  document.getElementById('travel').value = 0;
-  document.getElementById('build_house').value = 0;
-  document.getElementById('mortgage_interest').value = 0;
-  document.getElementById('life_health').value = 0;
-  document.getElementById('pension').value = 0;
-
-  // reset summary title
-  incToggle.querySelector('div').textContent = 'คลิกเพื่อกรอกเงินได้พึงประเมินทั้ง 8 ประเภท';
-  incContent.dataset.summary = '';
-  setIncOpen(true);
-  // hide results
-  document.getElementById('resultPanel').style.display = 'none';
-  document.getElementById('emptyPanel').style.display = 'block';
-});
-
-/* Initialize: open incomes for first use */
-setIncOpen(false);
-</script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // ตัวแปรเก็บข้อมูล
+            let incomeData = {
+                type1: 0,
+                type1Other: 0,
+                type2: 0,
+                type3: 0,
+                type4_1: 0,
+                type4_2: 0,
+                type5: 0,
+                type6: 0,
+                type7: 0,
+                type8: 0
+            };
+            
+            let deductionData = {
+                life: 0,
+                health: 0,
+                illness: 0,
+                pension: 0,
+                pvf: 0,
+                donation: 0,
+                housingLoan: 0,
+                personal: 60000,
+                spouse: 0,
+                children: 0
+            };
+            
+            // ฟังก์ชันคำนวณค่าใช้จ่ายตามประเภทเงินได้
+            function calculateExpenses(type, amount) {
+                switch(type) {
+                    case 1: // เงินได้จากการจ้างงาน - หัก 50% แต่ไม่เกิน 100,000 บาท
+                        return Math.min(amount * 0.5, 100000);
+                    case 2: // เงินได้จากการรับจ้างทำของ - หัก 70% แต่ไม่เกิน 100,000 บาท
+                        return Math.min(amount * 0.7, 100000);
+                    case 3: // ค่าสิทธิ - หักตามจริง แต่ไม่เกิน 100,000 บาท
+                        return Math.min(amount * 1, 100000);
+                    case 4: // ดอกเบี้ย เงินปันผล - หักตามจริง แต่ไม่เกิน 100,000 บาท
+                        return Math.min(amount * 1, 100000);
+                    case 5: // เงินได้จากการให้เช่าทรัพย์สิน - หักตามจริง แต่ไม่เกิน 100,000 บาท
+                        return Math.min(amount * 1, 100000);
+                    case 6: // เงินได้จากวิชาชีพอิสระ - หักตามจริง แต่ไม่เกิน 100,000 บาท
+                        return Math.min(amount * 1, 100000);
+                    case 7: // เงินได้จากการรับเหมา - หักตามจริง แต่ไม่เกิน 100,000 บาท
+                        return Math.min(amount * 1, 100000);
+                    case 8: // เงินได้จากธุรกิจ การค้า เกษตร - หักตามจริง แต่ไม่เกิน 100,000 บาท
+                        return Math.min(amount * 1, 100000);
+                    default:
+                        return 0;
+                }
+            }
+            
+            // ฟังก์ชันคำนวณภาษีตามขั้นบันได
+            function calculateTax(taxableIncome) {
+                let tax = 0;
+                const brackets = [
+                    { limit: 150000, rate: 0 },
+                    { limit: 300000, rate: 0.05 },
+                    { limit: 500000, rate: 0.10 },
+                    { limit: 750000, rate: 0.15 },
+                    { limit: 1000000, rate: 0.20 },
+                    { limit: 2000000, rate: 0.25 },
+                    { limit: 5000000, rate: 0.30 },
+                    { limit: Infinity, rate: 0.35 }
+                ];
+                
+                let remainingIncome = taxableIncome;
+                let breakdown = [];
+                
+                for (let i = 0; i < brackets.length; i++) {
+                    const bracket = brackets[i];
+                    const prevLimit = i === 0 ? 0 : brackets[i-1].limit;
+                    const bracketRange = bracket.limit - prevLimit;
+                    
+                    if (remainingIncome > bracketRange) {
+                        const bracketTax = bracketRange * bracket.rate;
+                        tax += bracketTax;
+                        breakdown.push({
+                            range: `${prevLimit.toLocaleString()} - ${bracket.limit.toLocaleString()}`,
+                            rate: `${bracket.rate * 100}%`,
+                            tax: bracketTax.toLocaleString()
+                        });
+                        remainingIncome -= bracketRange;
+                    } else {
+                        const bracketTax = remainingIncome * bracket.rate;
+                        tax += bracketTax;
+                        breakdown.push({
+                            range: `${prevLimit.toLocaleString()} - ${bracket.limit.toLocaleString()}`,
+                            rate: `${bracket.rate * 100}%`,
+                            tax: bracketTax.toLocaleString()
+                        });
+                        break;
+                    }
+                }
+                
+                return { total: tax, breakdown };
+            }
+            
+            // ฟังก์ชันคำนวณภาษีทั้งหมด
+            function calculateTotalTax() {
+                // คำนวณเงินได้สุทธิ
+                let totalIncome = 0;
+                let totalExpenses = 0;
+                
+                // ประเภท 1
+                const income1 = incomeData.type1 + incomeData.type1Other;
+                const expense1 = calculateExpenses(1, income1);
+                totalIncome += income1;
+                totalExpenses += expense1;
+                
+                // ประเภท 2
+                const expense2 = calculateExpenses(2, incomeData.type2);
+                totalIncome += incomeData.type2;
+                totalExpenses += expense2;
+                
+                // ประเภท 3
+                const expense3 = calculateExpenses(3, incomeData.type3);
+                totalIncome += incomeData.type3;
+                totalExpenses += expense3;
+                
+                // ประเภท 4
+                const income4 = incomeData.type4_1 + incomeData.type4_2;
+                const expense4 = calculateExpenses(4, income4);
+                totalIncome += income4;
+                totalExpenses += expense4;
+                
+                // ประเภท 5
+                const expense5 = calculateExpenses(5, incomeData.type5);
+                totalIncome += incomeData.type5;
+                totalExpenses += expense5;
+                
+                // ประเภท 6
+                const expense6 = calculateExpenses(6, incomeData.type6);
+                totalIncome += incomeData.type6;
+                totalExpenses += expense6;
+                
+                // ประเภท 7
+                const expense7 = calculateExpenses(7, incomeData.type7);
+                totalIncome += incomeData.type7;
+                totalExpenses += expense7;
+                
+                // ประเภท 8
+                const expense8 = calculateExpenses(8, incomeData.type8);
+                totalIncome += incomeData.type8;
+                totalExpenses += expense8;
+                
+                const netIncome = totalIncome - totalExpenses;
+                
+                // คำนวณค่าลดหย่อน
+                const totalDeductions = Object.values(deductionData).reduce((sum, value) => sum + value, 0);
+                
+                // คำนวณเงินได้หลังหักลดหย่อน
+                const taxableIncome = Math.max(0, netIncome - totalDeductions);
+                
+                // คำนวณภาษี
+                const taxResult = calculateTax(taxableIncome);
+                
+                // คำนวณโอกาสลดหย่อนเพิ่มเติม
+                const maxLifeHealthDeduction = Math.min(100000, netIncome * 0.15);
+                const maxPensionDeduction = Math.min(300000, netIncome * 0.15);
+                
+                const currentLifeHealth = deductionData.life + deductionData.health + deductionData.illness;
+                const currentPension = deductionData.pension + deductionData.pvf;
+                
+                const availableLifeHealth = Math.max(0, maxLifeHealthDeduction - currentLifeHealth);
+                const availablePension = Math.max(0, maxPensionDeduction - currentPension);
+                
+                // คำนวณภาษีที่ประหยัดได้หากใช้สิทธิเต็มที่
+                const additionalDeductions = availableLifeHealth + availablePension;
+                const newTaxableIncome = Math.max(0, taxableIncome - additionalDeductions);
+                const newTaxResult = calculateTax(newTaxableIncome);
+                
+                const potentialSavings = taxResult.total - newTaxResult.total;
+                const savingsPercentage = taxResult.total > 0 ? (potentialSavings / taxResult.total * 100).toFixed(2) : 0;
+                
+                return {
+                    totalIncome,
+                    totalExpenses,
+                    netIncome,
+                    totalDeductions,
+                    taxableIncome,
+                    tax: taxResult.total,
+                    taxBreakdown: taxResult.breakdown,
+                    availableLifeHealth,
+                    availablePension,
+                    potentialSavings,
+                    savingsPercentage
+                };
+            }
+            
+            // อัพเดทสรุปเงินได้
+            function updateIncomeSummary() {
+                const total = Object.values(incomeData).reduce((sum, value) => sum + value, 0);
+                document.getElementById('income-summary').textContent = total.toLocaleString() + ' บาท';
+            }
+            
+            // อัพเดทสรุปค่าลดหย่อน
+            function updateDeductionsSummary() {
+                const total = Object.values(deductionData).reduce((sum, value) => sum + value, 0);
+                document.getElementById('deductions-summary').textContent = total.toLocaleString() + ' บาท';
+            }
+            
+            // แสดงผลการคำนวณ
+            function displayResults() {
+                const result = calculateTotalTax();
+                
+                document.getElementById('total-income').textContent = result.totalIncome.toLocaleString() + ' บาท';
+                document.getElementById('total-expenses').textContent = result.totalExpenses.toLocaleString() + ' บาท';
+                document.getElementById('net-income').textContent = result.netIncome.toLocaleString() + ' บาท';
+                document.getElementById('total-deductions').textContent = result.totalDeductions.toLocaleString() + ' บาท';
+                document.getElementById('taxable-income').textContent = result.taxableIncome.toLocaleString() + ' บาท';
+                document.getElementById('tax-amount').textContent = result.tax.toLocaleString() + ' บาท';
+                
+                // แสดงรายละเอียดการคำนวณภาษี
+                const taxBreakdownEl = document.getElementById('tax-breakdown');
+                taxBreakdownEl.innerHTML = '';
+                
+                result.taxBreakdown.forEach(bracket => {
+                    const bracketEl = document.createElement('div');
+                    bracketEl.className = 'summary-row';
+                    bracketEl.innerHTML = `<span>${bracket.range} บาท (${bracket.rate}):</span><span>${bracket.tax} บาท</span>`;
+                    taxBreakdownEl.appendChild(bracketEl);
+                });
+                
+                // แสดงโอกาสลดหย่อนเพิ่มเติม
+                document.getElementById('max-life-health').textContent = result.availableLifeHealth.toLocaleString() + ' บาท';
+                document.getElementById('max-pension').textContent = result.availablePension.toLocaleString() + ' บาท';
+                document.getElementById('potential-savings').textContent = 
+                    result.potentialSavings.toLocaleString() + ' บาท (' + result.savingsPercentage + '%)';
+            }
+            
+            // Event Listeners
+            document.getElementById('income-header').addEventListener('click', function() {
+                const body = document.getElementById('income-body');
+                body.classList.toggle('hidden');
+            });
+            
+            document.getElementById('deductions-header').addEventListener('click', function() {
+                const body = document.getElementById('deductions-body');
+                body.classList.toggle('hidden');
+            });
+            
+            document.getElementById('results-header').addEventListener('click', function() {
+                const body = document.getElementById('results-body');
+                body.classList.toggle('hidden');
+            });
+            
+            document.getElementById('confirm-income').addEventListener('click', function() {
+                document.getElementById('income-body').classList.add('hidden');
+                updateIncomeSummary();
+            });
+            
+            document.getElementById('confirm-deductions').addEventListener('click', function() {
+                document.getElementById('deductions-body').classList.add('hidden');
+                updateDeductionsSummary();
+            });
+            
+            document.getElementById('calculate-tax').addEventListener('click', function() {
+                document.getElementById('results-body').classList.remove('hidden');
+                displayResults();
+            });
+            
+            document.getElementById('reset-form').addEventListener('click', function() {
+                // รีเซ็ตข้อมูล
+                incomeData = {
+                    type1: 0,
+                    type1Other: 0,
+                    type2: 0,
+                    type3: 0,
+                    type4_1: 0,
+                    type4_2: 0,
+                    type5: 0,
+                    type6: 0,
+                    type7: 0,
+                    type8: 0
+                };
+                
+                deductionData = {
+                    life: 0,
+                    health: 0,
+                    illness: 0,
+                    pension: 0,
+                    pvf: 0,
+                    donation: 0,
+                    housingLoan: 0,
+                    personal: 60000,
+                    spouse: 0,
+                    children: 0
+                };
+                
+                // รีเซ็ตฟอร์ม
+                document.querySelectorAll('.income-input').forEach(input => {
+                    input.value = '';
+                });
+                
+                document.querySelectorAll('.deduction-input').forEach(input => {
+                    input.value = '';
+                });
+                
+                document.getElementById('deduction-personal').value = '60000';
+                
+                // รีเซ็ตสรุป
+                updateIncomeSummary();
+                updateDeductionsSummary();
+                
+                // ซ่อนผลลัพธ์
+                document.getElementById('results-body').classList.add('hidden');
+            });
+            
+            // อัพเดทข้อมูลเมื่อผู้ใช้กรอกข้อมูล
+            document.querySelectorAll('.income-input').forEach(input => {
+                input.addEventListener('input', function() {
+                    const type = this.getAttribute('data-type');
+                    const value = parseFloat(this.value) || 0;
+                    
+                    switch(type) {
+                        case '1':
+                            if (this.id === 'income-type1') {
+                                incomeData.type1 = value;
+                            } else {
+                                incomeData.type1Other = value;
+                            }
+                            break;
+                        case '2':
+                            incomeData.type2 = value;
+                            break;
+                        case '3':
+                            incomeData.type3 = value;
+                            break;
+                        case '4':
+                            if (this.id === 'income-type4-1') {
+                                incomeData.type4_1 = value;
+                            } else {
+                                incomeData.type4_2 = value;
+                            }
+                            break;
+                        case '5':
+                            incomeData.type5 = value;
+                            break;
+                        case '6':
+                            incomeData.type6 = value;
+                            break;
+                        case '7':
+                            incomeData.type7 = value;
+                            break;
+                        case '8':
+                            incomeData.type8 = value;
+                            break;
+                    }
+                    
+                    updateIncomeSummary();
+                });
+            });
+            
+            document.querySelectorAll('.deduction-input').forEach(input => {
+                input.addEventListener('input', function() {
+                    const id = this.id;
+                    const value = parseFloat(this.value) || 0;
+                    
+                    switch(id) {
+                        case 'deduction-life':
+                            deductionData.life = value;
+                            break;
+                        case 'deduction-health':
+                            deductionData.health = value;
+                            break;
+                        case 'deduction-illness':
+                            deductionData.illness = value;
+                            break;
+                        case 'deduction-pension':
+                            deductionData.pension = value;
+                            break;
+                        case 'deduction-pvf':
+                            deductionData.pvf = value;
+                            break;
+                        case 'deduction-donation':
+                            deductionData.donation = value;
+                            break;
+                        case 'deduction-housing-loan':
+                            deductionData.housingLoan = value;
+                            break;
+                        case 'deduction-spouse':
+                            deductionData.spouse = value;
+                            break;
+                        case 'deduction-children':
+                            deductionData.children = value;
+                            break;
+                    }
+                    
+                    updateDeductionsSummary();
+                });
+            });
+        });
+    </script>
 </body>
 </html>
