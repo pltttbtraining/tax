@@ -277,7 +277,7 @@ const AdvisorScriptNew = ({ taxDetails, simTotals }) => {
           <div className="bg-purple-50 p-4 rounded-lg border-l-4 border-purple-500">
             <strong>จุดเชื่อมโยงข้อมูลลูกค้า (ไฮไลท์):</strong>
             <ul className="list-disc list-inside mt-2 text-sm text-purple-900">
-              <li>คุณลูกค้ายังมีสิทธิ์ลดหย่อนในส่วนบำนาญเหลืออีกถึง <strong>{gaps.pensionGap.toLocaleString()} บาท</strong> ครับ</li>
+              <li>คุณลูกค้า ยังมีสิทธิ์ลดหย่อนในส่วนบำนาญเหลืออีกถึง <strong>{gaps.pensionGap.toLocaleString()} บาท</strong> ครับ</li>
               <li>สิทธิ์ส่วนนี้แยกต่างหากจาก 1 แสนบาทแรก ทำให้ลดหย่อนเพิ่มได้อีกเยอะมาก</li>
               {taxSavingPotential > 0 && (
                 <li>จาก Simulator ที่เราลองปรับดู หากเติมเต็มสิทธิ์ จะช่วยประหยัดภาษีได้เพิ่มขึ้นประมาณ <strong>{taxSavingPotential.toLocaleString()} บาท</strong> เลยทีเดียวครับ</li>
