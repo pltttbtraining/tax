@@ -1,978 +1,1 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  Calculator, 
-  PieChart, 
-  Sliders, 
-  BookOpen, 
-  Menu, 
-  X, 
-  ChevronDown, 
-  Plus, 
-  Info, 
-  Lightbulb, 
-  ShieldCheck,
-  User,
-  Activity,
-  HeartPulse,
-  Umbrella,
-  Coins,
-  TrendingUp,
-  CheckCircle,
-  Home,
-  Users,
-  Gift
-} from 'lucide-react';
-
-// --- Constants & Data ---
-
-const INCOME_TYPES = [
-  { id: 1, name: '40(1) เงินเดือน/โบนัส', desc: 'เงินเดือน ค่าจ้าง โบนัส บำนาญ', deductionDesc: '50% ไม่เกิน 100,000', defaultRate: 0.5, hasFixedCap: true },
-  { id: 2, name: '40(2) รับทำงานให้', desc: 'ค่านายหน้า ค่าคอมมิชชั่น ค่ารับเหมาแรงงาน', deductionDesc: '50% ไม่เกิน 100,000 (รวมกับ 40(1))', defaultRate: 0.5, hasFixedCap: true },
-  { id: 3, name: '40(3) ค่าลิขสิทธิ์', desc: 'ค่าลิขสิทธิ์ ค่าGoodwill', deductionDesc: '50% ไม่เกิน 100,000 หรือตามจริง', defaultRate: 0.5, hasFixedCap: true },
-  { id: 4, name: '40(4) ดอกเบี้ย/เงินปันผล', desc: 'ดอกเบี้ยเงินฝาก เงินปันผลหุ้น', deductionDesc: 'ไม่หัก (ส่วนใหญ่ Final Tax)', defaultRate: 0, hasFixedCap: false },
-  { id: 5, name: '40(5) ค่าเช่า', desc: 'บ้าน รถยนต์ ที่ดิน', deductionDesc: '10-30% หรือตามจริง', defaultRate: 0.3, hasFixedCap: false }, 
-  { 
-    id: 6, 
-    name: '40(6) วิชาชีพอิสระ', 
-    desc: 'ประกอบโรคศิลปะ, กฎหมาย, วิศวกรรม, สถาปัตยกรรม, บัญชี', 
-    deductionDesc: 'เลือกอัตราหักค่าใช้จ่าย 30% หรือ 60%', 
-    defaultRate: 0.3, // Default to 30%
-    hasFixedCap: false,
-    subOptions: [
-      { label: 'แพทย์/ประกอบโรคศิลปะ (60%)', rate: 0.6 },
-      { label: 'กฎหมาย/วิศวกร/สถาปัตย์ (30%)', rate: 0.3 }
-    ]
-  },
-  { id: 7, name: '40(7) รับเหมาก่อสร้าง', desc: 'รับเหมาทั้งค่าแรงและค่าของ', deductionDesc: '60% หรือตามจริง', defaultRate: 0.6, hasFixedCap: false },
-  { id: 8, name: '40(8) อื่นๆ', desc: 'ขายของออนไลน์ นักแสดง ธุรกิจพาณิชย์', deductionDesc: '40-60% หรือตามจริง', defaultRate: 0.6, hasFixedCap: false }, 
-];
-
-const TAX_BRACKETS = [
-  { limit: 150000, rate: 0 },
-  { limit: 300000, rate: 0.05 },
-  { limit: 500000, rate: 0.10 },
-  { limit: 750000, rate: 0.15 },
-  { limit: 1000000, rate: 0.20 },
-  { limit: 2000000, rate: 0.25 },
-  { limit: 5000000, rate: 0.30 },
-  { limit: Infinity, rate: 0.35 },
-];
-
-const DEDUCTION_CATEGORIES = [
-  { 
-    id: 'personal', 
-    title: '1. ส่วนบุคคลและครอบครัว', 
-    icon: Users,
-    items: [
-      { key: 'socialSecurity', label: 'เงินสมทบประกันสังคม', desc: 'ตามที่จ่ายจริง, สูงสุด 9,000 บาท', max: 9000, isCommon: true },
-      { key: 'spouse', label: 'คู่สมรส (ไม่มีเงินได้)', desc: '60,000 บาท', max: 60000, isCommon: true },
-      { key: 'child', label: 'บุตร (คนละ 30,000 บาท)', desc: 'บุตรที่ชอบด้วยกฎหมายและบุตรบุญธรรม', max: null, isCommon: true },
-      { key: 'parent', label: 'ค่าเลี้ยงดูพ่อ-แม่', desc: 'คนละ 30,000 บาท (ตามเงื่อนไข)', max: null, isCommon: true },
-      { key: 'disabledSupporter', label: 'อุปการะผู้พิการ/ทุพพลภาพ', desc: 'คนละ 60,000 บาท (ตามเงื่อนไข)', max: null, isCommon: false },
-      { key: 'childBirth', label: 'ค่าฝากครรภ์/คลอดบุตร', desc: 'ตามที่จ่ายจริง, สูงสุด 60,000 บาท', max: 60000, isCommon: false },
-    ]
-  },
-  { 
-    id: 'insurance', 
-    title: '2. ประกัน / การออม / การลงทุน', 
-    icon: ShieldCheck,
-    items: [
-      { key: 'generalLife', label: 'เบี้ยประกันชีวิตทั่วไป', desc: 'ตามที่จ่ายจริง, สูงสุด 100,000 บาท', max: 100000, isCommon: true },
-      { key: 'health', label: 'เบี้ยประกันสุขภาพ (ตัวเอง)', desc: 'สูงสุด 25,000 บาท (รวมใน 1 แสนแรก)', max: 25000, isCommon: true },
-      { key: 'pension', label: 'ประกันบำนาญ', desc: '15% ของเงินได้ฯ ไม่เกิน 200,000 บาท', max: 200000, isCommon: true },
-      { key: 'rmf', label: 'RMF', desc: '30% ของเงินได้ฯ ไม่เกิน 500,000 บาท', max: 500000, isCommon: true },
-      { key: 'ssf', label: 'SSF', desc: '30% ของเงินได้ฯ ไม่เกิน 200,000 บาท', max: 200000, isCommon: true },
-      { key: 'thaiesg', label: 'ThaiESG', desc: 'สูงสุด 100,000 บาท (มีเงื่อนไข)', max: 100000, isCommon: false },
-      { key: 'providentFund', label: 'กองทุนสำรองเลี้ยงชีพ (PVD)', desc: '15% ของค่าจ้าง (มีเพดานรวม)', max: null, isCommon: false },
-      { key: 'healthParent', label: 'เบี้ยประกันสุขภาพ (บิดามารดา)', desc: 'สูงสุด 15,000 บาท (มีเงื่อนไข)', max: 15000, isCommon: false },
-    ]
-  },
-  { 
-    id: 'donation', 
-    title: '3. เงินบริจาค', 
-    icon: Gift,
-    items: [
-      { key: 'generalDonation', label: 'เงินบริจาคทั่วไป', desc: 'ตามที่จ่ายจริง, ไม่เกิน 10% ของเงินได้หลังหักค่าลดหย่อนอื่น', max: null, isCommon: true },
-      { key: 'educationDonation', label: 'บริจาค 2 เท่า (การศึกษา/สถานพยาบาล)', desc: 'หักได้ 2 เท่า, เพดานรวมไม่เกิน 10% ของเงินได้หลังหักค่าลดหย่อนอื่น', max: null, isCommon: false },
-      { key: 'politicalDonation', label: 'บริจาคให้พรรคการเมือง', desc: 'ตามที่จ่ายจริง, สูงสุด 5,000 บาท', max: 5000, isCommon: false },
-    ]
-  },
-  { 
-    id: 'special', 
-    title: '4. สิทธิพิเศษ / มาตรการรัฐ', 
-    icon: Home,
-    items: [
-      { key: 'mortgageInterest', label: 'ดอกเบี้ยสินเชื่อที่อยู่อาศัย', desc: 'ตามที่จ่ายจริง, สูงสุด 50,000 บาท', max: 50000, isCommon: true },
-    ]
-  },
-];
-
-
-// --- Helper Functions ---
-const calculateTaxFromNet = (netIncome) => {
-  let taxPayable = 0;
-  let remainingNet = netIncome;
-  let highestBracket = 0;
-
-  for (let i = 0; i < TAX_BRACKETS.length; i++) {
-    const current = TAX_BRACKETS[i];
-    const prevLimit = i === 0 ? 0 : TAX_BRACKETS[i-1].limit;
-    const range = current.limit - prevLimit;
-    
-    if (remainingNet > 0) {
-      const taxableAmount = Math.min(remainingNet, range === Infinity ? remainingNet : range);
-      taxPayable += taxableAmount * current.rate;
-      if (taxableAmount > 0) highestBracket = current.rate * 100;
-      remainingNet -= taxableAmount;
-    }
-  }
-  return { taxPayable, highestBracket };
-}
-
-// --- Components (AdvisorScriptNew and CircularProgress remain unchanged) ---
-
-const CircularProgress = ({ percentage, color, label, subLabel }) => {
-  const radius = 35;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (percentage / 100) * circumference;
-
-  return (
-    <div className="flex flex-col items-center">
-      <div className="relative w-24 h-24">
-        <svg className="transform -rotate-90 w-24 h-24">
-          <circle
-            className="text-gray-200"
-            strokeWidth="8"
-            stroke="currentColor"
-            fill="transparent"
-            r={radius}
-            cx="48"
-            cy="48"
-          />
-          <circle
-            className={`${color} transition-all duration-1000 ease-out`}
-            strokeWidth="8"
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-            stroke="currentColor"
-            fill="transparent"
-            r={radius}
-            cx="48"
-            cy="48"
-          />
-        </svg>
-        <div className="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center text-gray-700">
-          <span className="text-xl font-bold">{Math.min(percentage, 100).toFixed(0)}%</span>
-        </div>
-      </div>
-      <span className="mt-2 text-sm font-medium text-gray-700">{label}</span>
-      <span className="text-xs text-gray-500">{subLabel}</span>
-    </div>
-  );
-};
-
-const Modal = ({ isOpen, onClose, title, content }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-          <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-            <Lightbulb className="w-5 h-5 text-yellow-500" />
-            {title}
-          </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X size={20} />
-          </button>
-        </div>
-        <div className="p-6 text-gray-600 text-sm leading-relaxed whitespace-pre-line">
-          {content}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const AdvisorScriptNew = ({ taxDetails, simTotals }) => {
-  const [selectedScript, setSelectedScript] = useState(null);
-
-  const { gaps, highestBracket, taxPayable } = taxDetails;
-  const taxSavingPotential = simTotals.taxSaved;
-
-  const scriptOptions = [
-    {
-      id: 'savings',
-      icon: Coins,
-      title: '1. แนะนำประกันสะสมทรัพย์',
-      color: 'blue',
-      condition: gaps.lifeGap > 0,
-      content: (
-        <div className="space-y-4">
-          <h3 className="font-bold text-blue-800">บทพูดแนะนำ: ประกันสะสมทรัพย์ (เน้นสร้างวินัย+ลดหย่อน)</h3>
-          <p className="text-gray-700 italic">"สำหรับส่วนแรกที่อยากแนะนำคือ 'ประกันสะสมทรัพย์' ครับ เหมาะมากสำหรับเริ่มต้นวางแผนภาษี เพราะได้ทั้งความคุ้มครองชีวิตและเงินออมในตัว"</p>
-          <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
-            <strong>จุดเชื่อมโยงข้อมูลลูกค้า:</strong>
-            <ul className="list-disc list-inside mt-2 text-sm text-blue-900">
-              <li>ตอนนี้สิทธิ์ประกันชีวิตทั่วไป 1 แสนบาทแรก คุณลูกค้ายังเหลืออีก <strong>{gaps.lifeGap.toLocaleString()} บาท</strong> ครับ</li>
-              <li>ถ้าเติมส่วนนี้ให้เต็ม นอกจากจะได้เงินเก็บแล้ว ยังช่วยลดภาษีได้ทันทีตามฐานภาษีสูงสุดที่ <strong>{highestBracket}%</strong> เลยครับ</li>
-            </ul>
-          </div>
-          <p className="text-gray-700 italic">"สนใจดูแบบที่ออมสั้นๆ แล้วมีเงินคืนระหว่างสัญญาไหมครับ?"</p>
-        </div>
-      )
-    },
-    {
-      id: 'wholelife',
-      icon: Umbrella,
-      title: '2. แนะนำประกันตลอดชีพ',
-      color: 'indigo',
-      condition: gaps.lifeGap > 0,
-      content: (
-        <div className="space-y-4">
-          <h3 className="font-bold text-indigo-800">บทพูดแนะนำ: ประกันตลอดชีพ (เน้นความคุ้มครองสูง+มรดก)</h3>
-          <p className="text-gray-700 italic">"ถ้าคุณลูกค้ามองหาความอุ่นใจระยะยาว อยากสร้างหลักประกันที่มั่นคงให้กับครอบครัว แนะนำเป็น 'ประกันตลอดชีพ' ครับ"</p>
-           <div className="bg-indigo-50 p-4 rounded-lg border-l-4 border-indigo-500">
-            <strong>จุดเชื่อมโยงข้อมูลลูกค้า:</strong>
-            <ul className="list-disc list-inside mt-2 text-sm text-indigo-900">
-              <li>ใช้สิทธิ์ในโควต้าประกันชีวิตทั่วไปที่ยังเหลือ <strong>{gaps.lifeGap.toLocaleString()} บาท</strong> ได้เช่นกันครับ</li>
-              <li>ข้อดีคือ เบี้ยถูกกว่าแบบสะสมทรัพย์ แต่ได้ความคุ้มครองสูงมาก เหมาะกับการสร้างกองมรดกไว้ให้คนที่เรารักครับ</li>
-            </ul>
-          </div>
-          <p className="text-gray-700 italic">"ลองดูตัวเลขความคุ้มครองที่จะได้รับ เมื่อเทียบกับเบี้ยที่จ่ายดูไหมครับ คุ้มค่ามากครับ"</p>
-        </div>
-      )
-    },
-    {
-      id: 'health',
-      icon: HeartPulse,
-      title: '3. แนะนำประกันสุขภาพ',
-      color: 'pink',
-      condition: gaps.lifeGap > 0, // Health uses Life quota
-      content: (
-        <div className="space-y-4">
-          <h3 className="font-bold text-pink-800">บทพูดแนะนำ: ประกันสุขภาพ (เน้นปิดความเสี่ยงค่ารักษา)</h3>
-          <p className="text-gray-700 italic">"เรื่องสุขภาพเป็นสิ่งสำคัญที่สุดครับ โดยเฉพาะค่ารักษาพยาบาลที่สูงขึ้นทุกปี การมีประกันสุขภาพเหมาจ่ายไว้ช่วยให้อุ่นใจมากครับ"</p>
-          <div className="bg-pink-50 p-4 rounded-lg border-l-4 border-pink-500">
-            <strong>เงื่อนไขภาษี:</strong>
-            <p className="text-sm text-pink-900 mt-2">เบี้ยประกันสุขภาพสามารถนำมาลดหย่อนได้สูงสุด 25,000 บาท (แต่เมื่อรวมกับประกันชีวิตทั่วไปแล้วต้องไม่เกิน 100,000 บาท)</p>
-             <ul className="list-disc list-inside mt-2 text-sm text-pink-900">
-              <li>ซึ่งตอนนี้โควต้ารวม 1 แสนบาทของคุณลูกค้ายังว่างอยู่ครับ สามารถใช้สิทธิ์ตรงนี้ได้เต็มที่</li>
-            </ul>
-          </div>
-          <p className="text-gray-700 italic">"เรามาดูแผนที่ครอบคลุมค่าห้องและค่ารักษาที่เหมาะสมกับโรงพยาบาลที่คุณลูกค้าใช้ประจำกันไหมครับ?"</p>
-        </div>
-      )
-    },
-    {
-      id: 'pension',
-      icon: TrendingUp,
-      title: '4. แนะนำประกันบำนาญ',
-      color: 'purple',
-      condition: gaps.pensionGap > 0,
-      content: (
-        <div className="space-y-4">
-          <h3 className="font-bold text-purple-800">บทพูดแนะนำ: ประกันบำนาญ (เน้นวางแผนเกษียณ+ลดหย่อนเพิ่ม)</h3>
-          <p className="text-gray-700 italic">"สำหรับผู้ที่ต้องการวางแผนเกษียณอย่างจริงจัง และต้องการใช้สิทธิ์ลดหย่อนภาษีให้คุ้มค่าที่สุด 'ประกันบำนาญ' คือคำตอบครับ"</p>
-          <div className="bg-purple-50 p-4 rounded-lg border-l-4 border-purple-500">
-            <strong>จุดเชื่อมโยงข้อมูลลูกค้า (ไฮไลท์):</strong>
-            <ul className="list-disc list-inside mt-2 text-sm text-purple-900">
-              <li>คุณลูกค้ายังมีสิทธิ์ลดหย่อนในส่วนบำนาญเหลืออีกถึง <strong>{gaps.pensionGap.toLocaleString()} บาท</strong> ครับ</li>
-              <li>สิทธิ์ส่วนนี้แยกต่างหากจาก 1 แสนบาทแรก ทำให้ลดหย่อนเพิ่มได้อีกเยอะมาก</li>
-              {taxSavingPotential > 0 && (
-                <li>จาก Simulator ที่เราลองปรับดู หากเติมเต็มสิทธิ์ จะช่วยประหยัดภาษีได้เพิ่มขึ้นประมาณ <strong>{taxSavingPotential.toLocaleString()} บาท</strong> เลยทีเดียวครับ</li>
-              )}
-            </ul>
-          </div>
-           <p className="text-gray-700 italic">"ข้อดีคือเป็นการการันตีรายได้หลังเกษียณที่แน่นอน ไม่ผันผวนเหมือนการลงทุนอื่นๆ ครับ สนใจดูตารางเงินบำนาญที่จะได้รับไหมครับ?"</p>
-        </div>
-      )
-    }
-  ];
-
-  return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 mb-4">
-          <BookOpen className="w-6 h-6 text-blue-600" />
-          เลือกบทแนะนำผลิตภัณฑ์ (Advisor Script)
-        </h2>
-        <p className="text-gray-600 mb-6">เลือกประเภทผลิตภัณฑ์ที่เหมาะสมกับลูกค้า เพื่อดูบทพูดแนะนำ</p>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {scriptOptions.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => setSelectedScript(option.id)}
-              className={`p-4 rounded-xl border-2 transition-all flex items-start gap-3 text-left relative overflow-hidden group
-                ${selectedScript === option.id ? `border-${option.color}-500 bg-${option.color}-50` : `border-gray-200 hover:border-${option.color}-300 hover:bg-gray-50`}
-              `}
-            >
-              <div className={`p-3 rounded-full bg-${option.color}-100 text-${option.color}-600 group-hover:scale-110 transition-transform`}>
-                <option.icon size={24} />
-              </div>
-              <div>
-                <h3 className={`font-bold text-lg text-gray-800 group-hover:text-${option.color}-700`}>{option.title}</h3>
-                {option.condition ? (
-                  <span className="text-xs text-green-600 flex items-center gap-1 mt-1"><CheckCircle size={12}/> ยังมีช่องว่างสิทธิ์</span>
-                ) : (
-                   <span className="text-xs text-gray-400 flex items-center gap-1 mt-1">สิทธิ์เต็มแล้ว/ไม่แนะนำ</span>
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Script Content Display */}
-      {selectedScript && (
-        <div className="bg-white rounded-xl shadow-lg border border-blue-100 overflow-hidden animate-in slide-in-from-bottom-2">
-          <div className="p-6">
-            {scriptOptions.find(opt => opt.id === selectedScript)?.content}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-
-// --- Main Application ---
-
-export default function TaxCalculator() {
-  // --- State ---
-  const [activeTab, setActiveTab] = useState('income'); 
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [modalData, setModalData] = useState({ isOpen: false, title: '', content: '' });
-
-  // Input States
-  const [incomeMode, setIncomeMode] = useState('monthly'); // monthly, yearly
-  const [incomes, setIncomes] = useState([
-    { typeId: 1, amount: 0, active: true, expenseRate: INCOME_TYPES[0].defaultRate },
-    { typeId: 2, amount: 0, active: false, expenseRate: INCOME_TYPES[1].defaultRate },
-    { typeId: 3, amount: 0, active: false, expenseRate: INCOME_TYPES[2].defaultRate },
-    // Initialize others with default rates
-    ...INCOME_TYPES.slice(3).map(t => ({ typeId: t.id, amount: 0, active: false, expenseRate: t.defaultRate }))
-  ]);
-
-  // Combined all deduction items into a single object for easier setting
-  const initialDeductions = DEDUCTION_CATEGORIES.flatMap(cat => cat.items)
-    .reduce((acc, item) => ({ ...acc, [item.key]: 0 }), { socialSecurity: 9000 }); // Default SSF to 9000
-
-  const [deductions, setDeductions] = useState(initialDeductions);
-  const [showMoreDeductions, setShowMoreDeductions] = useState(false);
-
-  // Simulator State
-  const [simLife, setSimLife] = useState(0);
-  const [simPension, setSimPension] = useState(0);
-
-  // --- Logic ---
-
-  const handleIncomeChange = (id, field, val) => {
-    const newIncomes = incomes.map(inc => 
-      inc.typeId === id ? { ...inc, [field]: val } : inc
-    );
-    setIncomes(newIncomes);
-  };
-
-  const toggleIncomeType = (id) => {
-    setIncomes(incomes.map(inc => 
-      inc.typeId === id ? { ...inc, active: !inc.active } : inc
-    ));
-  };
-
-  // --- Calculation Engine ---
-
-  const calculateResults = useMemo(() => {
-    const multiplier = incomeMode === 'monthly' ? 12 : 1;
-    
-    // 1. Total Income & 2. Expenses Calculation
-    let totalIncome = 0;
-    let totalExpenses = 0;
-    
-    const activeIncomes = incomes.filter(i => i.active);
-
-    // Group 1: Type 1 & 2 (Combined cap 100k)
-    const type1 = activeIncomes.find(i => i.typeId === 1);
-    const type2 = activeIncomes.find(i => i.typeId === 2);
-    const inc1Amount = (type1?.amount || 0) * multiplier;
-    const inc2Amount = (type2?.amount || 0) * multiplier;
-    
-    if (type1) totalIncome += inc1Amount;
-    if (type2) totalIncome += inc2Amount;
-    
-    const exp12 = Math.min((inc1Amount + inc2Amount) * 0.5, 100000);
-    totalExpenses += exp12;
-
-    // Group 2: Type 3 (Separate 100k cap)
-    const type3 = activeIncomes.find(i => i.typeId === 3);
-    if (type3) {
-        const inc3Amount = type3.amount * multiplier;
-        totalIncome += inc3Amount;
-        totalExpenses += Math.min(inc3Amount * 0.5, 100000);
-    }
-
-    // Group 3: Others (Variable rates, no fixed cap generally for standard deduction)
-    activeIncomes.filter(i => i.typeId > 3).forEach(inc => {
-      const amount = inc.amount * multiplier;
-      totalIncome += amount;
-      // Use the specific expenseRate set for this income
-      totalExpenses += amount * inc.expenseRate;
-    });
-
-    // 3. Deductions (Base Constants & Non-Donation Items)
-    const personalDeduction = 60000;
-    const childDeduction = (deductions.child || 0) * 30000; // Assume 30k per child
-    const parentDeduction = (deductions.parent || 0) * 30000; // Assume 30k per parent
-    const disabledSupporterDeduction = (deductions.disabledSupporter || 0) * 60000; // Assume 60k per person
-    const childBirthDeduction = Math.min(deductions.childBirth || 0, 60000); // Max 60,000 per time
-
-    const familyDeduction = (deductions.spouse || 0) + childDeduction + parentDeduction;
-    const socialDeduction = Math.min(deductions.socialSecurity || 0, 9000); // Max 9,000
-
-    const mortgageInterestDeduction = Math.min(deductions.mortgageInterest || 0, 50000); // Max 50,000
-    
-    // Helper to calculate deductions with sim values
-    const calcDeductionsWithSim = (simL, simP) => {
-      // Inputs
-      const inputLife = (deductions.generalLife || 0) + simL;
-      const inputHealth = (deductions.health || 0);
-      const inputHealthParent = (deductions.healthParent || 0);
-      const inputPension = (deductions.pension || 0) + simP;
-      
-      // 4.1: General Life Quota (Max 100k)
-      const healthAllowable = Math.min(inputHealth, 25000); // Max 25k for health
-      const healthParentAllowable = Math.min(inputHealthParent, 15000); // Max 15k for health parent
-
-      let generalLifeBucketUsed = Math.min(inputLife + healthAllowable, 100000);
-      
-      // Health parent is separate from 100k, but part of Family/Personal group
-      
-      // 4.2: Investment Group Cap (500k)
-      const pvd = Math.min(deductions.providentFund || 0, totalIncome * 0.15); // Max 15%
-      const rmf = Math.min(deductions.rmf || 0, totalIncome * 0.30); // Max 30%
-      const ssf = Math.min(deductions.ssf || 0, totalIncome * 0.30); // Max 30%
-
-      // Pension logic part 1: Use Pension input to fill Life if needed (though usually not applied this way in R-R or A-A)
-      // For simplicity here, we assume: Life (100k) and Pension (200k) are separate buckets but must obey 500k rule.
-      
-      const pensionCap15Percent = totalIncome * 0.15;
-      const pensionStatutoryCap = 200000;
-      const maxPensionDeductible = Math.min(pensionCap15Percent, pensionStatutoryCap);
-      let finalPensionDeduction = Math.min(inputPension, maxPensionDeductible);
-
-      const investmentGroupTotal = finalPensionDeduction + rmf + ssf + pvd;
-      const finalInvestmentDeduction = Math.min(investmentGroupTotal, 500000); // Total investment cap
-
-      const thaiEsgDeduction = Math.min(deductions.thaiesg || 0, 100000); 
-
-      // 4.3: Total Non-Donation Deductions (A)
-      const totalNonDonationDeductions = (
-        personalDeduction + 
-        familyDeduction + 
-        socialDeduction +
-        disabledSupporterDeduction +
-        childBirthDeduction +
-        mortgageInterestDeduction +
-        healthParentAllowable +
-        generalLifeBucketUsed + // Includes Health up to 25k
-        finalInvestmentDeduction + // Includes PVD, RMF, SSF, Pension (capped at 500k)
-        thaiEsgDeduction
-      );
-
-      // 4.4: Base for Donation Cap (Income - Expenses - Non-Donation Deductions)
-      const incomeAfterExpensesAndOtherDeductions = Math.max(0, totalIncome - totalExpenses - totalNonDonationDeductions);
-
-      // 4.5: Donation Logic
-      // General Donation (Max 10% of A)
-      const generalDonationCap = incomeAfterExpensesAndOtherDeductions * 0.10;
-      const finalGeneralDonation = Math.min(deductions.generalDonation || 0, generalDonationCap);
-
-      // Double Donation (Max 10% of A for the 2X amount)
-      const doubleDonationInput = deductions.educationDonation || 0;
-      const doubleDonationDeductionCap = incomeAfterExpensesAndOtherDeductions * 0.10; 
-      const finalDoubleDonationDeduction = Math.min(doubleDonationInput * 2, doubleDonationDeductionCap);
-
-      // Political Donation (Max 5,000)
-      const finalPoliticalDonation = Math.min(deductions.politicalDonation || 0, 5000);
-
-      const totalDonationDeductions = finalGeneralDonation + finalDoubleDonationDeduction + finalPoliticalDonation;
-
-      const totalDeductions = totalNonDonationDeductions + totalDonationDeductions;
-
-      // Ensure Net Income is not negative
-      const netIncome = Math.max(totalIncome - totalExpenses - totalDeductions, 0);
-
-      return {
-        totalDeductions,
-        netIncome,
-        finalGeneralLifeDeduction: generalLifeBucketUsed,
-        finalPensionDeduction,
-        finalInvestmentDeduction,
-        pensionCap: maxPensionDeductible,
-        finalGeneralDonation,
-        finalDoubleDonationDeduction,
-        finalPoliticalDonation
-      };
-    };
-
-    // --- Calculate Base Case (No Simulation) ---
-    const baseCase = calcDeductionsWithSim(0, 0);
-    const { taxPayable: baseTaxPayable } = calculateTaxFromNet(baseCase.netIncome);
-
-
-    // --- Calculate Simulated Case (With Sliders) ---
-    const simCase = calcDeductionsWithSim(simLife, simPension);
-    const { taxPayable, highestBracket } = calculateTaxFromNet(simCase.netIncome);
-
-    return {
-      totalIncome,
-      totalExpenses,
-      netIncome: simCase.netIncome,
-      taxPayable,
-      highestBracket,
-      baseTaxPayable, // send base tax for comparison
-      deductionBreakdown: {
-        lifeUsed: simCase.finalGeneralLifeDeduction,
-        pensionUsed: simCase.finalPensionDeduction,
-        investmentTotal: simCase.finalInvestmentDeduction,
-        totalDonationDeductions: simCase.finalGeneralDonation + simCase.finalDoubleDonationDeduction + simCase.finalPoliticalDonation
-      },
-      gaps: {
-        lifeGap: Math.max(0, 100000 - simCase.finalGeneralLifeDeduction),
-        pensionGap: Math.max(0, simCase.pensionCap - simCase.finalPensionDeduction)
-      }
-    };
-  }, [incomes, deductions, incomeMode, simLife, simPension]);
-
-  // --- UI Components Internal ---
-
-  const renderSidebar = () => (
-    <div className={`
-      bg-gray-100 border-r border-gray-200 flex flex-col h-full transition-all duration-300
-      ${isMobileMenuOpen ? 'fixed inset-y-0 left-0 z-40 w-64 shadow-xl' : 'hidden md:flex md:w-64'}
-    `}>
-      {/* Header - Updated: Removed "System 2024" */}
-      <div className="p-6 border-b border-gray-200 bg-white">
-        <h1 className="font-bold text-xl text-blue-800 tracking-tight">TAX Calculator <span className="text-xs text-gray-500 block font-light">ฉบับผู้เชี่ยวชาญ</span></h1>
-      </div>
-
-      {/* Menu - Updated: Active state styling */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-2">
-        {[
-          { id: 'income', icon: Calculator, label: 'รายได้ (Income)' },
-          { id: 'deduction', icon: ShieldCheck, label: 'ลดหย่อน (Deductions)' },
-          { id: 'dashboard', icon: PieChart, label: 'Optimization Dashboard' },
-          { id: 'advisor', icon: BookOpen, label: 'Advisor Script' },
-        ].map(item => {
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => {
-                setActiveTab(item.id);
-                setIsMobileMenuOpen(false);
-              }}
-              className={`
-                w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all relative overflow-hidden
-                ${isActive 
-                  ? 'bg-white text-blue-700 shadow-sm border-l-4 border-blue-600' 
-                  : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'}
-              `}
-            >
-              <item.icon size={18} className={isActive ? 'text-blue-600' : ''} />
-              <span className="relative z-10">{item.label}</span>
-              {isActive && <div className="absolute inset-0 bg-blue-50 opacity-50 z-0"></div>}
-            </button>
-          )
-        })}
-      </nav>
-
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200 text-center bg-gray-100/50">
-        <p className="text-xs text-gray-500 font-light">Produced by : Training Specialist</p>
-        <p className="text-xs text-blue-800 font-bold mt-1">PRU - Academy</p>
-      </div>
-    </div>
-  );
-
-  const renderIncomePage = () => (
-    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">ข้อมูลรายได้</h2>
-        {/* Mode Toggle with Green Indicator */}
-        <div className="flex bg-gray-200 p-1 rounded-xl text-sm font-medium shadow-inner">
-          {['monthly', 'yearly'].map(mode => {
-             const isActive = incomeMode === mode;
-             return (
-              <button 
-                key={mode}
-                onClick={() => setIncomeMode(mode)}
-                className={`px-6 py-2 rounded-lg transition-all flex items-center gap-2 ${isActive ? 'bg-white shadow-sm text-blue-700 font-bold' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                {isActive && <Activity size={14} className="text-green-500 fill-green-500 animate-pulse"/>}
-                {mode === 'monthly' ? 'รายเดือน' : 'รายปี'}
-              </button>
-             )
-          })}
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {incomes.map((inc, idx) => {
-          const typeInfo = INCOME_TYPES.find(t => t.id === inc.typeId);
-          if (!inc.active && inc.typeId !== 1) return null;
-
-          return (
-            <div key={inc.typeId} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm relative group hover:border-blue-300 transition-all">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="font-semibold text-gray-800 text-lg flex items-center gap-2">
-                    {typeInfo.name}
-                    <button 
-                      onClick={() => setModalData({ isOpen: true, title: typeInfo.name, content: typeInfo.desc + '\n\nการหักค่าใช้จ่าย: ' + typeInfo.deductionDesc })}
-                      className="text-gray-400 hover:text-blue-500 transition-colors"
-                    >
-                      <Info size={16} />
-                    </button>
-                  </h3>
-                  
-                  {/* Updated: Sub-option selector for Type 6 (วิชาชีพอิสระ) */}
-                  {typeInfo.subOptions && inc.active ? (
-                    <select 
-                      className="mt-2 text-sm border-gray-300 rounded-md shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-gray-600 bg-gray-50"
-                      value={inc.expenseRate}
-                      onChange={(e) => handleIncomeChange(inc.typeId, 'expenseRate', parseFloat(e.target.value))}
-                    >
-                      {typeInfo.subOptions.map(opt => (
-                        <option key={opt.label} value={opt.rate}>{opt.label}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <p className="text-sm text-gray-500">{typeInfo.deductionDesc}</p>
-                  )}
-
-                </div>
-                {inc.typeId !== 1 && (
-                  <button onClick={() => toggleIncomeType(inc.typeId)} className="text-red-400 hover:text-red-600">
-                    <X size={18} />
-                  </button>
-                )}
-              </div>
-              <div className="relative">
-                <input
-                  type="number"
-                  value={inc.amount || ''}
-                  onChange={(e) => handleIncomeChange(inc.typeId, 'amount', parseFloat(e.target.value))}
-                  className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-right font-mono text-lg"
-                  placeholder="0.00"
-                />
-                <span className="absolute right-4 top-3.5 text-gray-400 text-sm">บาท</span>
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Add Button */}
-        <div className="pt-2">
-          <p className="text-sm text-gray-500 mb-3">เพิ่มรายได้ประเภทอื่น</p>
-          <div className="flex flex-wrap gap-2">
-            {incomes.filter(i => !i.active && i.typeId !== 1).map(inc => {
-              const info = INCOME_TYPES.find(t => t.id === inc.typeId);
-              return (
-                <button
-                  key={inc.typeId}
-                  onClick={() => toggleIncomeType(inc.typeId)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-white border border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-all"
-                >
-                  <Plus size={14} />
-                  {info.name.split(' ')[0]}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Auto Calc Expense Display */}
-        <div className="mt-8 bg-blue-50 rounded-xl p-4 flex justify-between items-center">
-          <div>
-            <span className="text-blue-800 font-semibold block">รวมค่าใช้จ่าย (หักอัตโนมัติ)</span>
-            <span className="text-xs text-blue-600 opacity-75">คำนวณตามอัตราของรายได้แต่ละประเภทที่ระบุ</span>
-          </div>
-          <span className="text-xl font-bold text-blue-900">{calculateResults.totalExpenses.toLocaleString()} บาท</span>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderDeductionPage = () => (
-    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">รายการลดหย่อน</h2>
-      
-      {DEDUCTION_CATEGORIES.map(category => {
-        // Filter items based on common/uncommon and toggle state
-        const items = category.items.filter(item => item.isCommon || showMoreDeductions);
-        
-        if (items.length === 0) return null; // Hide category if no items are shown
-
-        return (
-          <div key={category.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-            <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 font-bold text-blue-700 flex items-center gap-2">
-              <category.icon size={18} className="text-blue-500" /> {category.title}
-            </div>
-            <div className="p-4 space-y-4">
-              {items.map((item) => (
-                <div key={item.key} className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 flex-1">
-                    <span className="text-sm text-gray-700">{item.label}</span>
-                    <button 
-                      onClick={() => setModalData({ isOpen: true, title: item.label, content: item.desc })}
-                      className="text-gray-300 hover:text-yellow-500"
-                    >
-                      <Lightbulb size={14} />
-                    </button>
-                  </div>
-                  <input 
-                    type="number" 
-                    value={deductions[item.key] || ''}
-                    onChange={(e) => setDeductions({...deductions, [item.key]: parseFloat(e.target.value) || 0})}
-                    className="w-32 px-3 py-2 bg-gray-50 border border-gray-200 rounded text-right text-sm focus:ring-1 focus:ring-blue-500 outline-none"
-                    placeholder="0"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Toggle Button for Less Common Deductions */}
-      <div className="mt-6 text-center">
-        <button 
-          onClick={() => setShowMoreDeductions(!showMoreDeductions)}
-          className="text-blue-600 hover:text-blue-800 font-medium flex items-center justify-center gap-2 mx-auto bg-white border border-blue-200 px-4 py-2 rounded-full shadow-sm"
-        >
-          <Plus size={16} className={`transition-transform ${showMoreDeductions ? 'rotate-45 text-red-500' : ''}`} />
-          {showMoreDeductions ? 'ซ่อนรายการลดหย่อนที่สำคัญน้อย' : 'แสดงรายการลดหย่อนอื่น ๆ เพิ่มเติม'}
-        </button>
-      </div>
-
-    </div>
-  );
-
-  const renderDashboard = () => {
-    const { 
-      totalIncome, 
-      netIncome, 
-      taxPayable,
-      baseTaxPayable,
-      deductionBreakdown, 
-      gaps, 
-      highestBracket 
-    } = calculateResults;
-
-    const usedLifePercent = (deductionBreakdown.lifeUsed / 100000) * 100;
-    const maxPensionPotential = calculateResults.deductionBreakdown.pensionCap;
-    const usedPensionPercent = maxPensionPotential > 0 ? (deductionBreakdown.pensionUsed / maxPensionPotential) * 100 : 0;
-
-    // Calculate Savings from Simulation
-    const taxSaved = Math.max(0, baseTaxPayable - taxPayable);
-    const taxSavedPercent = baseTaxPayable > 0 ? (taxSaved / baseTaxPayable) * 100 : 0;
-
-    return (
-      <div className="space-y-6 animate-in fade-in duration-500 pb-8">
-        
-        {/* Main Tax Card */}
-        <div className="bg-gradient-to-br from-blue-600 to-cyan-500 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-10 -mt-10 blur-xl"></div>
-          
-          <div className="relative z-10 grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-blue-100 text-sm font-medium">รายได้สุทธิ (Net Income)</p>
-              <h3 className="text-2xl font-bold mt-1">{netIncome.toLocaleString()}</h3>
-            </div>
-            <div className="text-right">
-              <p className="text-blue-100 text-sm font-medium">ฐานภาษีสูงสุด</p>
-              <div className="inline-block bg-white/20 px-3 py-1 rounded-full text-xs font-bold mt-1 backdrop-blur-sm">
-                {highestBracket}%
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 pt-6 border-t border-white/20">
-            <p className="text-blue-100 text-sm mb-1">ภาษีที่ต้องชำระ (Tax Payable)</p>
-            <h2 className="text-4xl font-bold tracking-tight">{taxPayable.toLocaleString()} <span className="text-lg font-normal opacity-70">บาท</span></h2>
-          </div>
-        </div>
-
-        {/* Ring Charts */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center py-6">
-            <CircularProgress 
-              percentage={usedLifePercent} 
-              color="text-green-500" 
-              label="สิทธิ์ประกันชีวิต" 
-              subLabel={`${deductionBreakdown.lifeUsed.toLocaleString()} / 100,000`} 
-            />
-          </div>
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center py-6">
-            <CircularProgress 
-              percentage={usedPensionPercent} 
-              color="text-purple-500" 
-              label="สิทธิ์กลุ่มลงทุน (PVD, RMF, SSF, บำนาญ)`" 
-              subLabel={`${deductionBreakdown.investmentTotal.toLocaleString()} / 500,000`} 
-            />
-          </div>
-        </div>
-
-        {/* Simulation Section */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative overflow-hidden">
-           <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-          <div className="flex items-center gap-2 mb-6">
-            <Sliders className="w-6 h-6 text-blue-600" />
-            <div>
-              <h3 className="font-bold text-gray-800 text-lg">Simulator: ปรับแผนประกัน</h3>
-              <p className="text-sm text-gray-500">ลองปรับยอดซื้อเพิ่ม เพื่อดูผลลัพธ์ภาษีที่เปลี่ยนไป</p>
-            </div>
-          </div>
-
-          {/* Life Slider */}
-          <div className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <div className="flex justify-between text-sm mb-2">
-              <span className="font-medium text-gray-700 flex items-center gap-2"><ShieldCheck size={16}/> ซื้อประกันชีวิตเพิ่ม</span>
-              <span className="text-blue-600 font-bold text-lg">+{simLife.toLocaleString()}</span>
-            </div>
-            <input 
-              type="range" 
-              min="0" 
-              max="100000" 
-              step="1000" 
-              value={simLife}
-              onChange={(e) => setSimLife(Number(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-            />
-            <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-              <Info size={12} /> สิทธิ์ลดหย่อนประกันชีวิตทั่วไปสูงสุด 100,000 บาท
-            </p>
-          </div>
-
-          {/* Pension Slider */}
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <div className="flex justify-between text-sm mb-2">
-              <span className="font-medium text-gray-700 flex items-center gap-2"><TrendingUp size={16}/> ซื้อบำนาญเพิ่ม</span>
-              <span className="text-purple-600 font-bold text-lg">+{simPension.toLocaleString()}</span>
-            </div>
-            <input 
-              type="range" 
-              min="0" 
-              max="300000" 
-              step="1000" 
-              value={simPension}
-              onChange={(e) => setSimPension(Number(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
-            />
-            
-            {/* Dynamic Feedback Logic Display */}
-            <div className="mt-2 text-xs p-2 rounded bg-white border border-orange-100 text-orange-700 flex items-start gap-2">
-               <Lightbulb size={14} className="shrink-0 mt-0.5"/>
-               <span>
-                  เบี้ยบำนาญอยู่ภายใต้เพดาน 15% ของเงินได้ (และรวมในเพดานกลุ่มการลงทุน 500,000 บาท)
-               </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Updated: Tax Savings Summary Card */}
-        {(simLife > 0 || simPension > 0) && (
-        <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-6 text-white shadow-md animate-in slide-in-from-bottom-2">
-          <div className="flex items-center justify-between">
-            <div>
-               <p className="font-medium text-green-100 mb-1 flex items-center gap-2">
-                <Coins size={18} /> ผลลัพธ์จากการจำลองแผน (Simulation)
-               </p>
-               <h3 className="text-2xl font-bold">ประหยัดภาษีได้เพิ่มขึ้น</h3>
-            </div>
-            <div className="text-right">
-               <h2 className="text-3xl font-bold">{taxSaved.toLocaleString()} <span className="text-sm font-normal">บาท</span></h2>
-               <p className="text-green-100 text-sm mt-1">คิดเป็น {taxSavedPercent.toFixed(1)}% ของภาษีเดิม</p>
-            </div>
-          </div>
-        </div>
-        )}
-      </div>
-    );
-  };
-
-  // --- Render ---
-
-  return (
-    <div className="flex h-screen bg-gray-100 font-sans text-gray-900 overflow-hidden">
-      
-      {/* Mobile Backdrop */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/20 z-30 md:hidden backdrop-blur-sm transition-opacity"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      {renderSidebar()}
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full w-full relative bg-gray-50">
-        
-        {/* Mobile Header */}
-        <div className="md:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between sticky top-0 z-20 shadow-sm">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full">
-              <Menu size={24} />
-            </button>
-            <h1 className="font-bold text-lg text-blue-800">TAX Calculator</h1>
-          </div>
-          {/* Quick Result Preview on Mobile Header */}
-          <div className="text-right">
-            <span className="text-xs text-gray-500 block">ภาษี (ประมาณ)</span>
-            <span className="font-bold text-blue-600">{calculateResults.taxPayable.toLocaleString()}</span>
-          </div>
-        </div>
-
-        {/* Scrollable Content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 pb-32 scroll-smooth">
-          <div className="max-w-3xl mx-auto">
-            {activeTab === 'income' && renderIncomePage()}
-            {activeTab === 'deduction' && renderDeductionPage()}
-            {activeTab === 'dashboard' && renderDashboard()}
-            {activeTab === 'advisor' && <AdvisorScriptNew taxDetails={calculateResults} simTotals={{ taxSaved: Math.max(0, calculateResults.baseTaxPayable - calculateResults.taxPayable) }} />}
-          </div>
-        </main>
-
-        {/* Next Button for Forms */}
-        {activeTab !== 'advisor' && activeTab !== 'dashboard' && (
-           <div className="absolute bottom-8 right-6 md:right-12 z-10">
-             <button 
-               onClick={() => {
-                 const order = ['income', 'deduction', 'dashboard', 'advisor'];
-                 const next = order[order.indexOf(activeTab) + 1];
-                 if(next) setActiveTab(next);
-               }}
-               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2 font-medium transition-all transform hover:scale-105 active:scale-95"
-             >
-               ถัดไป <ChevronDown size={18} className="rotate-[-90deg]" />
-             </button>
-           </div>
-        )}
-
-      </div>
-
-      {/* Modal */}
-      <Modal 
-        isOpen={modalData.isOpen} 
-        onClose={() => setModalData({ ...modalData, isOpen: false })} 
-        title={modalData.title} 
-        content={modalData.content} 
-      />
-
-    </div>
-  );
-}
+<!DOCTYPE html> <html lang="th"> <head>     <meta charset="UTF-8">     <meta name="viewport" content="width=device-width, initial-scale=1.0">     <title>ระบบจำลองคำนวณภาษีและค่าลดหย่อน</title>     <!-- Load Tailwind CSS -->     <script src="https://cdn.tailwindcss.com"></script>     <!-- Load Lucide Icons -->     <script src="https://unpkg.com/lucide@latest"></script>     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Noto+Sans+Thai:wght@100..900&display=swap" rel="stylesheet">     <style>         /* กำหนด Font หลักให้เป็น Noto Sans Thai และ fallback เป็น Inter/Sans-serif */         body {             font-family: 'Noto Sans Thai', 'Inter', sans-serif;             background-color: #f7f9fb;         }         .scroll-smooth {              scroll-behavior: smooth;         }         /* Style for the fixed bottom-right button to prevent overlap */         .main-content-padding {             padding-bottom: 100px; /* Ensure space for the fixed 'Next' button */         }         /* Custom scrollbar for better aesthetics */         ::-webkit-scrollbar {             width: 8px;         }         ::-webkit-scrollbar-track {             background: #f1f1f1;         }         ::-webkit-scrollbar-thumb {             background: #cbd5e1;             border-radius: 4px;         }         ::-webkit-scrollbar-thumb:hover {             background: #94a3b8;         }     </style> </head> <body class="min-h-screen">      <div id="app" class="relative min-h-screen flex">                  <!-- Sidebar Navigation -->         <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out z-30 bg-white border-r border-gray-200 w-64 p-4 shadow-xl md:shadow-none">             <!-- Sidebar Content will be rendered here -->         </aside>          <!-- Main Content Area -->         <div class="flex-1 md:ml-64 transition-all duration-300">             <!-- Header/Top Nav -->             <header class="sticky top-0 bg-white border-b border-gray-200 z-20 shadow-sm">                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">                     <h1 class="text-xl font-bold text-gray-900 flex items-center gap-2">                         <span class="md:hidden cursor-pointer" onclick="toggleSidebar()">                             <svg data-lucide="menu" width="24" height="24" class="text-gray-600"></svg>                         </span>                         <svg data-lucide="calculator" width="24" height="24" class="text-blue-600"></svg>                         <span>TAX SIMULATOR</span>                     </h1>                     <div class="flex items-center gap-4">                         <button class="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors hidden sm:block">                             <svg data-lucide="user" width="20" height="20" class="inline-block mr-1"></svg>                             ผู้ใช้งาน                         </button>                         <button class="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors hidden sm:block">                             <svg data-lucide="book-open" width="20" height="20" class="inline-block mr-1"></svg>                             คู่มือ                         </button>                     </div>                 </div>             </header>              <!-- Page Content -->             <main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 main-content-padding scroll-smooth">                 <div id="page-content">                     <!-- Dynamic content (Income, Deduction, Dashboard, Advisor) will be injected here -->                 </div>             </main>              <!-- Next Button for Forms -->             <div id="next-button-container" class="absolute bottom-8 right-6 md:right-12 z-10 hidden">                  <button                     onclick="nextTab()"                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2 font-medium transition-all transform hover:scale-105 active:scale-95"                  >                    ถัดไป <svg data-lucide="chevron-down" width="18" height="18" class="rotate-[-90deg]"></svg>                  </button>             </div>                      </div>                  <!-- Sidebar Backdrop (for mobile) -->         <div id="sidebar-backdrop" class="fixed inset-0 bg-black opacity-0 md:opacity-0 transition-opacity duration-300 ease-in-out z-20 hidden md:hidden" onclick="toggleSidebar()"></div>      </div>      <!-- Modal Container -->     <div id="modal-container">         <!-- Modal content will be injected here -->     </div>      <script>         // Global variables and constants for the application          // --- Constants & Data --         const INCOME_TYPES = [             { id: '40(1)', name: '40(1) เงินเดือน/โบนัส', desc: 'เงินเดือน ค่าจ้าง โบนัส บำนาญ', deductionDesc: '50% ไม่เกิน 100,000', defaultRate: 0.5, hasFixedCap: true },             { id: '40(2)', name: '40(2) รับทำงานให้', desc: 'ค่านายหน้า ค่าคอมมิชชั่น ค่ารับเหมาแรงงาน', deductionDesc: '50% ไม่เกิน 100,000 (รวมกับ 40(1))', defaultRate: 0.5, hasFixedCap: true },             { id: '40(3)', name: '40(3) ค่าลิขสิทธิ์', desc: 'ค่าลิขสิทธิ์ ค่าGoodwill', deductionDesc: '50% ไม่เกิน 100,000 หรือตามจริง', defaultRate: 0.5, hasFixedCap: true },             { id: '40(4)', name: '40(4) ดอกเบี้ย/เงินปันผล', desc: 'ดอกเบี้ย เงินปันผล ส่วนแบ่งกำไร', deductionDesc: 'หักค่าใช้จ่ายไม่ได้ (หรือเลือกหักภาษี ณ ที่จ่าย 10% - 15%)', defaultRate: 0, hasFixedCap: false },             { id: '40(5)', name: '40(5) ค่าเช่า', desc: 'ค่าเช่าทรัพย์สิน ค่าผิดสัญญาเช่า', deductionDesc: '10% - 40% (ขึ้นอยู่กับประเภททรัพย์สิน)', defaultRate: 0.3, hasFixedCap: false },             { id: '40(6)', name: '40(6) วิชาชีพ', desc: 'แพทย์, นักกฎหมาย, วิศวกร, สถาปนิก, บัญชี, ศิลปิน', deductionDesc: '60% (ยกเว้นแพทย์ 60% หรือ 40%)', defaultRate: 0.6, hasFixedCap: false },             { id: '40(7)', name: '40(7) รับเหมาเบ็ดเสร็จ', desc: 'รับเหมาที่ผู้รับเหมาจัดหาสัมภาระด้วย', deductionDesc: '70% หรือตามจริง', defaultRate: 0.7, hasFixedCap: false },             { id: '40(8)', name: '40(8) ธุรกิจ/อื่นๆ', desc: 'ค้าขาย ธุรกิจ บริการอื่นๆ ที่ไม่เข้าพวก 40(1)-(7)', deductionDesc: '60% หรือตามจริง', defaultRate: 0.6, hasFixedCap: false },         ];          const DEDUCTION_TYPES = [             // กลุ่มค่าลดหย่อนส่วนตัวและครอบครัว (Personal & Family)             { id: 'personal', name: 'ค่าลดหย่อนส่วนตัว', desc: '60,000 บาท', type: 'family', max: 60000, icon: 'user' },             { id: 'spouse', name: 'คู่สมรสไม่มีรายได้', desc: '60,000 บาท', type: 'family', max: 60000, icon: 'users' },             { id: 'child', name: 'บุตร', desc: '30,000 บาท/คน (บุตรคนที่ 2 ขึ้นไปที่เกิดตั้งแต่ปี 2561 เป็นต้นไป ลดได้ 60,000 บาท)', type: 'family', max: Infinity, icon: 'user' },             { id: 'parent', name: 'บิดามารดา', desc: '30,000 บาท/คน (เงื่อนไข: อายุ 60 ปีขึ้นไป มีรายได้ไม่เกิน 30,000 บาท)', type: 'family', max: Infinity, icon: 'home' },             // กลุ่มประกันและการลงทุน (Insurance & Investment)             { id: 'life_insurance', name: 'เบี้ยประกันชีวิต', desc: 'สูงสุด 100,000 บาท', type: 'insurance', max: 100000, icon: 'heart-pulse' },             { id: 'health_insurance', name: 'เบี้ยประกันสุขภาพ', desc: 'สูงสุด 25,000 บาท (รวมประกันชีวิตไม่เกิน 100,000 บาท)', type: 'insurance', max: 25000, icon: 'activity' },             { id: 'parent_health_insurance', name: 'เบี้ยประกันสุขภาพบิดามารดา', desc: 'สูงสุด 15,000 บาท', type: 'insurance', max: 15000, icon: 'heart-pulse' },             { id: 'pension_fund', name: 'กองทุนบำเหน็จบำนาญ (RMF/SSF/PVD)', desc: 'รวมกันไม่เกิน 500,000 บาท และไม่เกิน 30% ของเงินได้', type: 'investment', max: 500000, icon: 'trending-up' },             { id: 'social_security', name: 'ประกันสังคม', desc: 'ตามจ่ายจริง (ปัจจุบันสูงสุด 9,000 บาท)', type: 'insurance', max: 9000, icon: 'shield-check' },             // กลุ่มอสังหาริมทรัพย์และอื่นๆ (Property & Other)             { id: 'home_loan_interest', name: 'ดอกเบี้ยกู้ยืมเพื่อที่อยู่อาศัย', desc: 'สูงสุด 100,000 บาท', type: 'property', max: 100000, icon: 'home' },             { id: 'donation', name: 'บริจาคทั่วไป', desc: 'ไม่เกิน 10% ของเงินได้หลังหักค่าใช้จ่ายและค่าลดหย่อนอื่นๆ', type: 'other', max: Infinity, icon: 'gift' },         ];          const TAX_BRACKETS = [             { max: 150000, rate: 0.00, tax: 0 },             { max: 300000, rate: 0.05, tax: 7500 },             { max: 500000, rate: 0.10, tax: 20000 },             { max: 750000, rate: 0.15, tax: 37500 },             { max: 1000000, rate: 0.20, tax: 50000 },             { max: 2000000, rate: 0.25, tax: 250000 },             { max: 5000000, rate: 0.30, tax: 900000 },             { max: Infinity, rate: 0.35, tax: Infinity } // Infinity max means 'over' 5,000,000         ];          // --- State Management ---         let state = {             activeTab: 'income', // 'income', 'deduction', 'dashboard', 'advisor'             isSidebarOpen: window.innerWidth >= 768, // Start open on desktop             incomeInputs: INCOME_TYPES.map(t => ({ id: t.id, amount: 0, actualExpense: 0, useActual: false })),             deductionInputs: DEDUCTION_TYPES.map(t => ({ id: t.id, amount: 0, count: 0 })), // count for child/parent             modalData: {                 isOpen: false,                 title: '',                 content: ''             }         };          // --- Helper Functions ---          /**          * Generates the SVG string for a Lucide icon.          * Note: This is a simplified helper since we cannot use the Lucide React component directly.          * The main icons in the header and sidebar use the data-lucide tag for the Lucide library to handle.          * This function is used for inline icons within dynamic content.          * @param {string} name Icon name (e.g., 'user', 'calculator')          * @param {number} size Size in pixels          * @param {string} classes Additional Tailwind classes          * @returns {string} HTML string for the icon          */         function getIconSvg(name, size = 24, classes = '') {             return `<svg data-lucide="${name}" width="${size}" height="${size}" class="${classes}"></svg>`;         }           /**          * Formats a number with comma separators.          * @param {number} num          * @returns {string}          */         function formatNumber(num) {             return new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 }).format(num);         }          /**          * Calculates the total tax liability based on net income.          * @param {number} netIncome The income after all deductions and allowances.          * @returns {number} The final tax payable amount.          */         function calculateTax(netIncome) {             if (netIncome <= 0) return 0;              let taxPayable = 0;             let previousMax = 0;              for (const bracket of TAX_BRACKETS) {                 const taxableAmount = Math.max(0, netIncome - previousMax);                                  if (bracket.max === Infinity) {                     taxPayable += taxableAmount * bracket.rate;                     break;                 }                  if (netIncome > bracket.max) {                     // Taxable amount in this bracket (max - previousMax)                     const bracketTaxable = bracket.max - previousMax;                     taxPayable += bracketTaxable * bracket.rate;                 } else {                     // Net income falls within this bracket                     taxPayable += taxableAmount * bracket.rate;                     break;                 }                 previousMax = bracket.max;             }              // ฐานภาษี 150,000 แรกได้รับการยกเว้นภาษี             return Math.max(0, taxPayable);         }           /**          * Core function to perform all tax calculations.          * @returns {object} Calculated tax results.          */         function calculateResults() {             // --- 1. Total Income Calculation ---             let totalIncome = 0;             let income40_1_2 = 0;             const incomeDetails = {};              for (const input of state.incomeInputs) {                 const type = INCOME_TYPES.find(t => t.id === input.id);                 const amount = parseFloat(input.amount) || 0;                                  // Track 40(1) and 40(2) for combined standard deduction                 if (input.id === '40(1)' || input.id === '40(2)') {                     income40_1_2 += amount;                 }                                  totalIncome += amount;                 incomeDetails[input.id] = { amount, type };             }              // --- 2. Standard Expense Deductions (หักค่าใช้จ่าย) ---             let totalDeductibleExpense = 0;             for (const input of state.incomeInputs) {                 const type = INCOME_TYPES.find(t => t.id === input.id);                 const amount = parseFloat(input.amount) || 0;                  let expense = 0;                  if (input.id === '40(1)' || input.id === '40(2)') {                     // These are part of the combined 50% (max 100k) pool. Handled below.                 } else if (input.id === '40(3)') {                     expense = Math.min(100000, amount * 0.5); // 50% max 100k                 } else if (input.id === '40(4)') {                     expense = 0;                 } else if (input.id === '40(5)' || input.id === '40(6)' || input.id === '40(7)' || input.id === '40(8)') {                     // Choose actual vs standard                     const standard = amount * type.defaultRate;                     const actual = parseFloat(input.actualExpense) || 0;                     if (input.useActual && actual > 0) {                         expense = actual;                     } else {                         expense = standard;                     }                 }                 totalDeductibleExpense += expense;             }                          // Add 40(1) + 40(2) combined cap             totalDeductibleExpense += Math.min(100000, income40_1_2 * 0.5);              // Total Income - Total Deductible Expense (This is the Net Income before Allowances)             let netIncomeBeforeAllowances = Math.max(0, totalIncome - totalDeductibleExpense);               // --- 3. Allowances Calculation (ค่าลดหย่อน) ---             let totalAllowanceDeduction = 0;             const allowanceDetails = {};                          // Base allowances from deductionInputs             for (const input of state.deductionInputs) {                 const type = DEDUCTION_TYPES.find(t => t.id === input.id);                 const amount = parseFloat(input.amount) || 0;                 const count = parseFloat(input.count) || 0;                 let deductibleAmount = 0;                  if (input.id === 'personal' || input.id === 'spouse') {                     deductibleAmount = type.max;                 } else if (input.id === 'child') {                     // Simplified: Assume all children get the standard 30k.                     deductibleAmount = count * 30000;                 } else if (input.id === 'parent') {                     deductibleAmount = count * 30000;                 } else if (type.max !== Infinity) {                     deductibleAmount = Math.min(amount, type.max);                 } else if (input.id === 'donation') {                     // Donation is calculated last, capped at 10% of (Net Income - Other Allowances)                     // For now, track the raw amount                     deductibleAmount = amount;                 } else {                     deductibleAmount = amount;                 }                  allowanceDetails[input.id] = { amount, count, deductibleAmount, type };                                  // Sum up non-donation allowances for intermediate calculation                 if (input.id !== 'donation') {                     totalAllowanceDeduction += deductibleAmount;                 }             }                          // Calculate limit for RMF/SSF/PVD (30% of Net Income before other investments)             const netIncomeForInvestmentCap = netIncomeBeforeAllowances - (allowanceDetails['personal']?.deductibleAmount || 0) - (allowanceDetails['spouse']?.deductibleAmount || 0) - (allowanceDetails['child']?.deductibleAmount || 0) - (allowanceDetails['parent']?.deductibleAmount || 0);              // RMF/SSF/PVD combined cap logic:             const pensionInput = state.deductionInputs.find(d => d.id === 'pension_fund');             const pensionAmount = parseFloat(pensionInput?.amount) || 0;             // Cap at 30% of Net Income, and max 500,000             const capRMFSSF = Math.min(500000, netIncomeForInvestmentCap * 0.3);                          // Update pension deduction:             let pensionDeductible = Math.min(pensionAmount, capRMFSSF);                          // Recalculate Total Non-Donation Allowance with corrected pension             totalAllowanceDeduction = 0;             for (const id in allowanceDetails) {                 if (id === 'donation') continue;                 if (id === 'pension_fund') {                     totalAllowanceDeduction += pensionDeductible;                 } else {                     totalAllowanceDeduction += allowanceDetails[id].deductibleAmount;                 }             }               // --- 4. Net Income (เงินได้สุทธิก่อนบริจาค) ---             let netIncome = netIncomeBeforeAllowances - totalAllowanceDeduction;             netIncome = Math.max(0, netIncome);              // --- 5. Donation Deduction (บริจาค) ---             const rawDonation = allowanceDetails['donation']?.amount || 0;             const maxDonationDeductible = netIncome * 0.1;             const finalDonationDeductible = Math.min(rawDonation, maxDonationDeductible);                          // Final Net Income after Donation             let finalNetIncome = netIncome - finalDonationDeductible;             finalNetIncome = Math.max(0, finalNetIncome);              // --- 6. Tax Calculation ---             // Taxable income 150,000 แรกได้รับการยกเว้นภาษี             const taxPayable = calculateTax(finalNetIncome);                          // Calculate Tax Saved: Tax calculated before deductions (minus personal allowance 60k) minus final tax.             // Simplified baseline: Net income before allowances - Personal allowance (60k)             const netIncomeForBaselineTax = netIncomeBeforeAllowances - 60000;             const baseTaxPayable = calculateTax(netIncomeForBaselineTax);              const taxSaved = Math.max(0, baseTaxPayable - taxPayable);               return {                 totalIncome: totalIncome,                 totalExpenseDeduction: totalDeductibleExpense,                 netIncomeBeforeAllowances: netIncomeBeforeAllowances,                 totalAllowanceDeduction: totalAllowanceDeduction + finalDonationDeductible,                 finalNetIncome: finalNetIncome,                 baseTaxPayable: baseTaxPayable,                 taxPayable: taxPayable,                 taxSaved: taxSaved,                 details: {                     income40_1_2,                     pensionDeductible,                     maxDonationDeductible,                     finalDonationDeductible                 }             };         }                  // --- UI & Event Handlers ---          /**          * Toggles the mobile sidebar visibility.          */         function toggleSidebar() {             state.isSidebarOpen = !state.isSidebarOpen;             updateSidebarDisplay();             updateUI(); // Re-render for icon changes if necessary         }                  /**          * Updates the active tab and triggers the main UI refresh.          * @param {string} tabName           */         function setActiveTab(tabName) {             state.activeTab = tabName;             // Close sidebar automatically on mobile after selection             if (window.innerWidth < 768) {                 state.isSidebarOpen = false;                 updateSidebarDisplay();             }             updateUI();             // Scroll to top of main content on tab change             document.querySelector('main').scrollTo({ top: 0, behavior: 'smooth' });         }                  /**          * Handles the click on the 'Next' button.          */         function nextTab() {             const order = ['income', 'deduction', 'dashboard', 'advisor'];             const currentIndex = order.indexOf(state.activeTab);             const next = order[currentIndex + 1];             if (next) {                 setActiveTab(next);             }         }          /**          * Updates the state from an income form input change.          * @param {string} id           * @param {string} field 'amount', 'actualExpense', or 'useActual'          * @param {*} value           */         function handleIncomeChange(id, field, value) {             const index = state.incomeInputs.findIndex(i => i.id === id);             if (index !== -1) {                 if (field === 'useActual') {                     state.incomeInputs[index][field] = value; // Checkbox value is boolean                 } else {                     state.incomeInputs[index][field] = parseFloat(value) || 0;                 }             }             updateUI();         }          /**          * Updates the state from a deduction form input change.          * @param {string} id           * @param {string} field 'amount' or 'count'          * @param {*} value           */         function handleDeductionChange(id, field, value) {             const index = state.deductionInputs.findIndex(i => i.id === id);             if (index !== -1) {                 state.deductionInputs[index][field] = parseFloat(value) || 0;             }             updateUI();         }          /**          * Shows the modal with details.          * @param {string} title           * @param {string} content           */         function showModal(title, content) {             state.modalData = { isOpen: true, title, content };             renderModal();         }          /**          * Hides the modal.          */         function hideModal() {             state.modalData.isOpen = false;             renderModal();         }          // --- Render Functions ---          /**          * Renders the main sidebar navigation.          */         function renderSidebar() {             const tabs = [                 { id: 'income', name: 'รายได้', icon: 'sliders' },                 { id: 'deduction', name: 'ค่าลดหย่อน', icon: 'pie-chart' },                 { id: 'dashboard', name: 'สรุปผล', icon: 'calculator' },                 { id: 'advisor', name: 'Tax Advisor', icon: 'lightbulb' }             ];              const navItems = tabs.map(tab => {                 const isActive = state.activeTab === tab.id;                 return `                     <button                          onclick="setActiveTab('${tab.id}')"                         class="w-full text-left flex items-center gap-3 p-3 rounded-xl transition-colors ${isActive ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-100'}"                     >                         ${getIconSvg(tab.icon, 20)}                         <span class="text-sm">${tab.name}</span>                     </button>                 `;             }).join('');              const sidebarHtml = `                 <div class="flex flex-col h-full">                     <div class="flex justify-between items-center mb-6 md:mb-8">                         <h2 class="text-2xl font-extrabold text-blue-600 flex items-center gap-2">                              ${getIconSvg('calculator', 24)}                             Tax Flow                         </h2>                         <button class="md:hidden p-1 rounded-full text-gray-500 hover:bg-gray-100" onclick="toggleSidebar()">                             ${getIconSvg('x', 24)}                         </button>                     </div>                     <nav class="space-y-2 flex-grow">                         ${navItems}                     </nav>                     <div class="pt-4 border-t border-gray-100 mt-4">                         <div class="p-3 bg-gray-50 rounded-xl">                             <p class="text-xs font-medium text-gray-500">ข้อมูลอ้างอิง</p>                             <p class="text-xs text-gray-400">อัปเดตล่าสุด: ปีภาษี 2567</p>                         </div>                     </div>                 </div>             `;             document.getElementById('sidebar').innerHTML = sidebarHtml;         }          /**          * Renders the Income input page.          */         function renderIncomePage() {             const formInputs = state.incomeInputs.map(input => {                 const type = INCOME_TYPES.find(t => t.id === input.id);                 // 40(1), 40(2), 40(3) has a fixed standard deduction cap.                 // 40(5) to 40(8) can choose between standard rate or actual expense.                 const canUseActual = input.id !== '40(1)' && input.id !== '40(2)' && input.id !== '40(3)' && input.id !== '40(4)' && type.defaultRate > 0;                                  return `                     <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">                         <div class="flex justify-between items-start mb-3">                             <h3 class="text-lg font-bold text-gray-800">${type.name}</h3>                             <button onclick="showModal('${type.name}', 'ประเภทเงินได้: ${type.desc}<br><br><strong>หักค่าใช้จ่าย:</strong> ${type.deductionDesc}')" class="text-blue-500 hover:text-blue-700 transition-colors">                                 ${getIconSvg('info', 20, 'inline-block')}                             </button>                         </div>                         <p class="text-sm text-gray-500 mb-4">${type.desc}</p>                                                  <label for="income-${type.id}" class="block text-sm font-medium text-gray-700 mb-1">จำนวนเงินได้ (บาท)</label>                         <input                             type="number"                             id="income-${type.id}"                             value="${input.amount || ''}"                             onchange="handleIncomeChange('${type.id}', 'amount', this.value)"                             placeholder="เช่น 300000"                             class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-shadow"                             min="0"                         />                          ${canUseActual ? `                             <div class="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">                                 <div class="flex items-center mb-2">                                     <input                                          type="checkbox"                                          id="useActual-${type.id}"                                          ${input.useActual ? 'checked' : ''}                                         onchange="handleIncomeChange('${type.id}', 'useActual', this.checked)"                                         class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"                                     />                                     <label for="useActual-${type.id}" class="ml-2 text-sm font-medium text-yellow-800">เลือกหักค่าใช้จ่ายตามจริง</label>                                 </div>                                  <input                                     type="number"                                     id="actualExpense-${type.id}"                                     value="${input.actualExpense || ''}"                                     onchange="handleIncomeChange('${type.id}', 'actualExpense', this.value)"                                     placeholder="ค่าใช้จ่ายตามจริง (ถ้าเลือก)"                                     class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-shadow mt-2 ${input.useActual ? '' : 'hidden'}"                                     min="0"                                     ${input.useActual ? '' : 'disabled'}                                 />                             </div>                         ` : ''}                      </div>                 `;             }).join('');              return `                 <h2 class="text-3xl font-extrabold text-gray-900 mb-6">1. ข้อมูลรายได้</h2>                 <p class="text-gray-600 mb-8">กรุณากรอกรายได้ต่อปีของท่านตามประเภทเงินได้มาตรา 40</p>                 <div class="space-y-6">                     ${formInputs}                 </div>             `;         }                  /**          * Renders the Deduction input page.          */         function renderDeductionPage() {             const sections = {                 family: { name: 'ส่วนตัวและครอบครัว', icon: 'users', items: [] },                 insurance: { name: 'ประกันและกองทุน', icon: 'heart-pulse', items: [] },                 investment: { name: 'การลงทุนระยะยาว', icon: 'trending-up', items: [] },                 property: { name: 'ที่อยู่อาศัย', icon: 'home', items: [] },                 other: { name: 'อื่นๆ (เช่น บริจาค)', icon: 'gift', items: [] },             };              state.deductionInputs.forEach(input => {                 const type = DEDUCTION_TYPES.find(t => t.id === input.id);                 if (sections[type.type]) {                     sections[type.type].items.push({ input, type });                 }             });              const renderSection = (section) => {                 const itemsHtml = section.items.map(({ input, type }) => {                     const isCountBased = input.id === 'child' || input.id === 'parent';                     const inputField = isCountBased ? 'count' : 'amount';                     const placeholder = isCountBased ? 'จำนวนคน' : 'จำนวนเงินที่จ่ายจริง';                      let inputType = 'number';                     if (input.id === 'donation') {                         inputType = 'number';                      }                      return `                         <div class="border border-gray-200 p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-gray-50">                             <div class="flex-1">                                 <div class="text-sm font-semibold text-gray-700 flex items-center gap-2">                                     ${getIconSvg(type.icon, 18)}                                     ${type.name}                                 </div>                                 <p class="text-xs text-gray-500 mt-1">${type.desc}</p>                             </div>                             <div class="w-full sm:w-1/3 min-w-[150px]">                                 <input                                     type="${inputType}"                                     value="${input[inputField] || ''}"                                     onchange="handleDeductionChange('${type.id}', '${inputField}', this.value)"                                     placeholder="${placeholder}"                                     class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"                                     min="0"                                 />                             </div>                         </div>                     `;                 }).join('');                  return `                     <div class="mt-8">                         <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2 mb-4 p-2 rounded-lg bg-blue-50 border-l-4 border-blue-600">                              ${getIconSvg(section.icon, 22, 'text-blue-600')}                             ${section.name}                         </h3>                         <div class="space-y-3">                             ${itemsHtml}                         </div>                     </div>                 `;             };               return `                 <h2 class="text-3xl font-extrabold text-gray-900 mb-6">2. ข้อมูลค่าลดหย่อน</h2>                 <p class="text-gray-600 mb-8">กรุณากรอกจำนวนเงิน/จำนวนคน สำหรับสิทธิ์ค่าลดหย่อนที่ท่านมี</p>                 <div class="space-y-6">                     ${renderSection(sections.family)}                     ${renderSection(sections.insurance)}                     ${renderSection(sections.investment)}                     ${renderSection(sections.property)}                     ${renderSection(sections.other)}                 </div>                 <div class="mt-8 p-4 bg-red-50 border border-red-200 rounded-xl">                     <p class="text-sm font-medium text-red-700">ข้อควรระวัง: ระบบนี้เป็นเพียงการจำลองเพื่อการวางแผนเท่านั้น! เงื่อนไขลดหย่อนจริงมีความซับซ้อน ควรปรึกษาผู้เชี่ยวชาญก่อนยื่นภาษีจริง</p>                 </div>             `;         }          /**          * Renders the Dashboard/Summary page.          */         function renderDashboard() {             const results = calculateResults();             const taxPayable = results.taxPayable;             const taxSaved = results.taxSaved;             const taxRate = results.finalNetIncome > 0 ? (taxPayable / results.finalNetIncome) * 100 : 0;             const netIncome = results.finalNetIncome;                          const statusClass = taxPayable > 0 ? 'bg-red-500' : 'bg-green-600';             const statusText = taxPayable > 0 ? 'ต้องชำระเพิ่ม' : 'ไม่ต้องชำระ';              const dataPoints = [                 { name: 'เงินได้รวมทั้งสิ้น', value: results.totalIncome, icon: 'coins' },                 { name: 'หักค่าใช้จ่าย', value: results.totalExpenseDeduction, icon: 'sliders' },                 { name: 'เงินได้หลังหักค่าใช้จ่าย', value: results.netIncomeBeforeAllowances, icon: 'trending-up' },                 { name: 'หักค่าลดหย่อนทั้งหมด', value: results.totalAllowanceDeduction, icon: 'umbrella' },                 { name: 'เงินได้สุทธิ (Net Income)', value: netIncome, icon: 'check-circle' },             ];              const summaryHtml = dataPoints.map(item => `                 <div class="flex justify-between items-center py-3 border-b last:border-b-0">                     <div class="text-gray-600 flex items-center gap-2 font-medium">                         ${getIconSvg(item.icon, 18, 'text-blue-500')}                         ${item.name}                     </div>                     <div class="text-lg font-semibold text-gray-900">                         ${formatNumber(item.value)} บาท                     </div>                 </div>             `).join('');               return `                 <h2 class="text-3xl font-extrabold text-gray-900 mb-6">3. สรุปผลการคำนวณภาษี</h2>                 <p class="text-gray-600 mb-8">ผลการคำนวณจำลองจากข้อมูลรายได้และค่าลดหย่อนที่ท่านกรอก</p>                  <!-- Tax Payable Card -->                 <div class="p-8 rounded-2xl shadow-2xl ${statusClass} text-white mb-8 transform transition-all duration-300 hover:scale-[1.01] flex flex-col justify-center items-center text-center">                     <p class="text-3xl font-bold mb-2">ภาษีที่ต้องชำระ / คืน</p>                     <p class="text-6xl font-extrabold mb-4">                         ${formatNumber(Math.abs(taxPayable))}                     </p>                     <p class="text-xl font-medium">${statusText}</p>                     ${taxSaved > 0 ? `                         <div class="mt-4 p-2 bg-white/20 rounded-lg text-sm font-semibold">                             <p>💰 ลดภาษีจากค่าลดหย่อนได้รวม: ${formatNumber(taxSaved)} บาท</p>                         </div>                     ` : ''}                 </div>                  <!-- Calculation Breakdown -->                 <div class="bg-white p-6 rounded-xl shadow-lg mb-8">                     <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">รายละเอียดการคำนวณ</h3>                     ${summaryHtml}                 </div>                  <!-- Tax Rate Info -->                 <div class="bg-blue-50 p-6 rounded-xl border border-blue-200">                     <h3 class="text-xl font-bold text-blue-700 mb-3">อัตราภาษีที่ท่านต้องจ่าย</h3>                     <p class="text-4xl font-extrabold text-blue-600 mb-3">                         ${taxRate.toFixed(2)}%                     </p>                     <p class="text-gray-700">เงินได้สุทธิ ${formatNumber(netIncome)} บาท อยู่ในฐานภาษีสูงสุดที่ ${TAX_BRACKETS.find(b => netIncome <= b.max) ? (TAX_BRACKETS.find(b => netIncome <= b.max).rate * 100).toFixed(0) : '35'}%</p>                 </div>             `;         }          /**          * Renders the (simplified) Tax Advisor page.          */         function renderAdvisor() {             const results = calculateResults();             const taxPayable = results.taxPayable;             const taxSaved = results.taxSaved;                          // Simplified LLM response simulation             const taxBracketRate = TAX_BRACKETS.find(b => results.finalNetIncome <= b.max) ? (TAX_BRACKETS.find(b => results.finalNetIncome <= b.max).rate * 100).toFixed(0) : '35';              const advice = `                 <div class="space-y-4">                     <p>สวัสดีครับ! ผมคือผู้ช่วยวางแผนภาษี AI ของคุณ จากข้อมูลที่ท่านกรอกเข้ามา ผมได้วิเคราะห์สถานการณ์ภาษีของท่านดังนี้:</p>                                          <div class="p-4 bg-green-50 rounded-xl border border-green-200">                         <h4 class="font-bold text-lg text-green-700 flex items-center gap-2">                             ${getIconSvg('activity', 20)}                             สรุปสถานะภาษี                         </h4>                         <ul class="list-disc list-inside ml-4 text-gray-700">                             <li>เงินได้สุทธิ: <strong class="text-green-800">${formatNumber(results.finalNetIncome)} บาท</strong></li>                             <li>ภาษีที่ต้องชำระ: <strong class="text-red-700">${formatNumber(taxPayable)} บาท</strong></li>                             <li>มูลค่าการลดหย่อนทั้งหมด: <strong class="text-blue-700">${formatNumber(results.totalAllowanceDeduction)} บาท</strong></li>                             <li>ท่านประหยัดภาษีได้: <strong class="text-blue-700">${formatNumber(taxSaved)} บาท</strong></li>                         </ul>                     </div>                      <div class="p-4 bg-yellow-50 rounded-xl border border-yellow-200">                         <h4 class="font-bold text-lg text-yellow-800 flex items-center gap-2">                             ${getIconSvg('lightbulb', 20)}                             คำแนะนำเบื้องต้นเพื่อประหยัดภาษีเพิ่ม                         </h4>                         <p class="text-gray-700 mt-2">                            เนื่องจากเงินได้สุทธิของท่านอยู่ในฐานภาษี ${taxBracketRate}% การลดหย่อนทุก 1 บาท จะช่วยลดภาษีได้ ${taxBracketRate} สตางค์                         </p>                         <ul class="list-disc list-inside ml-4 mt-2 text-gray-700">                             <li><strong class="font-semibold">การลงทุน:</strong> หากท่านยังไม่ได้ลงทุนใน RMF/SSF จนเต็มเพดาน 30% หรือ 500,000 บาท ท่านควรพิจารณาเพื่อลดภาระภาษีในปัจจุบันและเพิ่มความมั่งคั่งในระยะยาว</li>                             <li><strong class="font-semibold">ประกัน:</strong> หากท่านมีวงเงินประกันสุขภาพที่ยังไม่เต็ม 25,000 บาท การซื้อเพิ่มสามารถนำมาลดหย่อนได้อีก</li>                             <li><strong class="font-semibold">การบริจาค:</strong> การบริจาคสามารถลดหย่อนได้สูงสุด 10% ของเงินได้หลังหักค่าใช้จ่ายและค่าลดหย่อนอื่นๆ หากท่านยังไม่ถึงเพดาน การบริจาคเพิ่มเป็นทางเลือกที่ดี</li>                         </ul>                     </div>                 </div>             `;               return `                 <h2 class="text-3xl font-extrabold text-gray-900 mb-6">4. Tax Advisor AI</h2>                 <p class="text-gray-600 mb-8">ให้ AI ช่วยวิเคราะห์สถานการณ์ภาษีและเสนอแนะแนวทางการวางแผนภาษีเบื้องต้น</p>                                  <div class="p-6 bg-white rounded-xl shadow-lg border border-blue-100">                     <h3 class="text-2xl font-bold text-blue-700 mb-4 flex items-center gap-2">                         ${getIconSvg('lightbulb', 24)}                         รายงานการวิเคราะห์จาก AI                     </h3>                     ${advice}                 </div>             `;         }          /**          * Renders the generic Card for a page.          * @param {string} contentHtml          * @returns {string}          */         function renderPageContent(contentHtml) {             return `                 <div class="bg-white p-6 md:p-10 rounded-xl shadow-xl">                     ${contentHtml}                 </div>             `;         }                  /**          * Renders the Modal component.          */         function renderModal() {             const modalContainer = document.getElementById('modal-container');             if (!state.modalData.isOpen) {                 modalContainer.innerHTML = '';                 document.body.classList.remove('overflow-hidden');                 return;             }              document.body.classList.add('overflow-hidden');              modalContainer.innerHTML = `                 <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 transition-opacity duration-300">                     <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full transform scale-100 transition-transform duration-300 overflow-hidden">                         <!-- Modal Header -->                         <div class="p-5 border-b border-gray-200 flex justify-between items-center bg-blue-600 text-white">                             <h3 class="text-xl font-bold">${state.modalData.title}</h3>                             <button onclick="hideModal()" class="text-white hover:text-gray-200 transition-colors p-1 rounded-full hover:bg-white/10">                                 ${getIconSvg('x', 24)}                             </button>                         </div>                                                  <!-- Modal Body -->                         <div class="p-5 text-gray-700 max-h-[70vh] overflow-y-auto">                             ${state.modalData.content}                         </div>                                                  <!-- Modal Footer -->                         <div class="p-4 border-t border-gray-200 flex justify-end">                             <button onclick="hideModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg font-medium transition-colors">ปิด</button>                         </div>                     </div>                 </div>             `;         }           /**          * The main render loop that updates all dynamic parts of the UI.          */         function updateUI() {             // 1. Render Sidebar             renderSidebar();              // 2. Render Page Content             const pageContentEl = document.getElementById('page-content');             let content = '';              switch (state.activeTab) {                 case 'income':                     content = renderIncomePage();                     break;                 case 'deduction':                     content = renderDeductionPage();                     break;                 case 'dashboard':                     content = renderDashboard();                     break;                 case 'advisor':                     content = renderAdvisor();                     break;             }             pageContentEl.innerHTML = renderPageContent(content);                          // 3. Render Modal             renderModal();              // 4. Update Next Button visibility             const nextButtonContainer = document.getElementById('next-button-container');             if (state.activeTab !== 'advisor' && state.activeTab !== 'dashboard') {                 nextButtonContainer.classList.remove('hidden');             } else {                 nextButtonContainer.classList.add('hidden');             }                          // 5. Lucide Icon Replacement (Crucial step for icons to work)             // Re-render icons on the entire page or a specific container             if (typeof lucide !== 'undefined' && lucide.createIcons) {                  lucide.createIcons();             }                          // 6. Update sidebar state on resize/init (handles responsiveness)             updateSidebarDisplay();         }                  /**          * Adjusts sidebar state based on screen size (for responsiveness).          */         function updateSidebarDisplay() {              const sidebar = document.getElementById('sidebar');              const backdrop = document.getElementById('sidebar-backdrop');              const main = document.querySelector('.flex-1');               if (window.innerWidth >= 768) {                  // Desktop view: always show sidebar                  sidebar.classList.remove('-translate-x-full');                  main.classList.add('md:ml-64');                  backdrop.classList.add('hidden');                  state.isSidebarOpen = true;              } else {                  // Mobile view: control based on state                  main.classList.remove('md:ml-64');                  if (state.isSidebarOpen) {                      sidebar.classList.remove('-translate-x-full');                      backdrop.classList.remove('hidden', 'opacity-0');                      backdrop.classList.add('opacity-50');                  } else {                      sidebar.classList.add('-translate-x-full');                      backdrop.classList.add('hidden', 'opacity-0');                      backdrop.classList.remove('opacity-50');                  }              }         }                   // --- Initialization ---          // Wait for the window to fully load before running the app         window.onload = function() {             // Initialize event listener for screen resize             window.addEventListener('resize', updateSidebarDisplay);                          // Initial render             updateUI();         };      </script> </body> </html> 
